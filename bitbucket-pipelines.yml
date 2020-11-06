@@ -7,6 +7,8 @@ deploy: &deploy
         - >
           if [ $BITBUCKET_BRANCH == "develop" ];
           then
+            export S3_BUCKET="dev-3beep-telegram-bot"
+            export STACK_NAME="Dev3beepTelegramBot"
             export STAGE_NAME="dev"
             export ENVIRONMENT_NAME="Dev"
             export CASSANDRA_USERNAME=$DEV_CASSANDRA_USERNAME
@@ -25,6 +27,8 @@ deploy: &deploy
         - >
           if [ $BITBUCKET_BRANCH == "master" ];
           then
+            export S3_BUCKET="prod-3beep-telegram-bot"
+            export STACK_NAME="Prod3beepTelegramBot"
             export STAGE_NAME="prod"
             export ENVIRONMENT_NAME="Prod"
             export CASSANDRA_USERNAME=$PROD_CASSANDRA_USERNAME
@@ -45,8 +49,8 @@ deploy: &deploy
             AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
             AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
             AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
-            S3_BUCKET: "telegram-3beep-bot"
-            STACK_NAME: "Telegram3beepBot"
+            S3_BUCKET: $S3_BUCKET
+            STACK_NAME: $STACK_NAME
             CAPABILITIES: ['CAPABILITY_IAM', 'CAPABILITY_NAMED_IAM', 'CAPABILITY_AUTO_EXPAND']
             SAM_TEMPLATE: 'template.yaml'
             STACK_PARAMETERS: >

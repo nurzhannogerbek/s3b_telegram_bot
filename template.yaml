@@ -73,7 +73,7 @@ Resources:
             StageName:
                 Fn::Sub: "${StageName}"
             Cors: "'*'"
-            OpenApiVersion: "2.0"
+            OpenApiVersion: "3.0.3"
     SendMessageFromTelegram:
         Type: AWS::Serverless::Function
         Properties:
