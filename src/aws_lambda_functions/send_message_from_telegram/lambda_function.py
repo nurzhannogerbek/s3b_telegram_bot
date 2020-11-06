@@ -23,7 +23,8 @@ def lambda_handler(event, context):
     print(event)
     event = json.loads(event)
     chat_id = event['body']['message']['chat']['id']
-    request_url = "{0}sendMessage?text={1}&chat_id={2}".format(TELEGRAM_API_URL, event, chat_id)
+    text = event['body']['message']['text']
+    request_url = "{0}sendMessage?text={1}&chat_id={2}".format(TELEGRAM_API_URL, text, chat_id)
     requests.get(request_url)
     response = {
         "statusCode": 200
