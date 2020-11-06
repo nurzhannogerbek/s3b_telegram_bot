@@ -20,6 +20,7 @@ TELEGRAM_API_URL = "https://api.telegram.org/bot{0}/".format(TELEGRAM_BOT_TOKEN)
 def lambda_handler(event, context):
     print(event)
     response = {
-        'statusCode': 200
+        'statusCode': 200,
+        'body': 'Hello World!'
     }
     return response
