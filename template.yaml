@@ -64,9 +64,10 @@ Globals:
 Resources:
     TelegramApiGateway:
         Type: AWS::Serverless::Api
-        StageName:
-            Fn::Sub: "${EnvironmentName}"
-        Cors: "'*'"
+        Properties:
+            StageName:
+                Fn::Sub: "${EnvironmentName}"
+            Cors: "'*'"
     SendMessageFromTelegram:
         Type: AWS::Serverless::Function
         Properties:
@@ -79,12 +80,16 @@ Resources:
                 TelegramApiGatewayEvent:
                     Type: Api
                     Properties:
-                        Method: POST
-                        Path: /send_message_from_telegram
                         RestApiId:
-                          Ref: TelegramApiGateway
+                            Ref: TelegramApiGateway
+                        Path: /send_message_from_telegram
+                        Method: POST
             Layers:
                 - Fn::ImportValue:
                     Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
                     Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+Outputs:
+    TelegramApiGateway:
+        Value:
+            Fn::Sub: 'https://${TelegramApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EnvironmentName}'
