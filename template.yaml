@@ -64,6 +64,8 @@ Globals:
 Resources:
     TelegramApiGateway:
         Type: AWS::Serverless::HttpApi
+        StageName:
+            Ref: "${EnvironmentName}"
     SendMessageFromTelegram:
         Type: AWS::Serverless::Function
         Properties:
