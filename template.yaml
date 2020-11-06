@@ -63,10 +63,7 @@ Globals:
                     Fn::Sub: "${TelegramBotToken}"
 Resources:
     TelegramApiGateway:
-        Type: AWS::Serverless::Api
-        Properties:
-            StageName:
-                Fn::Sub: "${EnvironmentName}"
+        Type: AWS::Serverless::HttpApi
     SendMessageFromTelegram:
         Type: AWS::Serverless::Function
         Properties:
