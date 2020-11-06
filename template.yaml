@@ -1,0 +1,90 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Parameters:
+    EnvironmentName:
+        Type: String
+        Default: Test
+    BackendDependenciesStackName:
+        Type: String
+        Default: 3beepBackendDependencies
+    CassandraUsername:
+        Type: String
+    CassandraPassword:
+        Type: String
+    CassandraHost:
+        Type: String
+    CassandraPort:
+        Type: String
+    CassandraLocalDC:
+        Type: String
+    CassandraKeyspaceName:
+        Type: String
+    PostgreSQLUsername:
+        Type: String
+    PostgreSQLPassword:
+        Type: String
+    PostgreSQLHost:
+        Type: String
+    PostgreSQLPort:
+        Type: String
+    PostgreSQLDBName:
+        Type: String
+    TelegramBotToken:
+        Type: String
+Globals:
+    Function:
+        MemorySize: 3008
+        Timeout: 900
+        Environment:
+            Variables:
+                CASSANDRA_USERNAME:
+                    Fn::Sub: "${CassandraUsername}"
+                CASSANDRA_PASSWORD:
+                    Fn::Sub: "${CassandraPassword}"
+                CASSANDRA_HOST:
+                    Fn::Sub: "${CassandraHost}"
+                CASSANDRA_PORT:
+                    Fn::Sub: "${CassandraPort}"
+                CASSANDRA_LOCAL_DC:
+                    Fn::Sub: "${CassandraLocalDC}"
+                CASSANDRA_KEYSPACE_NAME:
+                    Fn::Sub: "${CassandraKeyspaceName}"
+                POSTGRESQL_USERNAME:
+                    Fn::Sub: "${PostgreSQLUsername}"
+                POSTGRESQL_PASSWORD:
+                    Fn::Sub: "${PostgreSQLPassword}"
+                POSTGRESQL_HOST:
+                    Fn::Sub: "${PostgreSQLHost}"
+                POSTGRESQL_PORT:
+                    Fn::Sub: "${PostgreSQLPort}"
+                POSTGRESQL_DB_NAME:
+                    Fn::Sub: "${PostgreSQLDBName}"
+                TELEGRAM_BOT_TOKEN:
+                    Fn::Sub: "${TelegramBotToken}"
+Resources:
+    TelegramApiGateway:
+        Type: AWS::Serverless::Api
+        Properties:
+            StageName:
+                Fn::Sub: "${EnvironmentName}"
+    SendMessageFromTelegram:
+        Type: AWS::Serverless::Function
+        Properties:
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}SendMessageFromTelegram"
+            CodeUri: src/aws_lambda_functions/send_message_from_telegram
+            Handler: lambda_function.lambda_handler
+            Runtime: python3.8
+            Events:
+                TelegramApiGatewayEvent:
+                    Type: Api
+                    Properties:
+                        Method: POST
+                        Path: /send_message_from_telegram
+                        RestApiId:
+                          Ref: TelegramApiGateway
+            Layers:
+                - Fn::ImportValue:
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
+                - Fn::ImportValue:
+                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
