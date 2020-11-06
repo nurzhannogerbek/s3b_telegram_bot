@@ -21,9 +21,9 @@ TELEGRAM_API_URL = "https://api.telegram.org/bot{0}/".format(TELEGRAM_BOT_TOKEN)
 
 def lambda_handler(event, context):
     print(event)
-    event = json.loads(event)
-    chat_id = event['body']['message']['chat']['id']
-    text = event['body']['message']['text']
+    message = json.loads(event['body'])
+    chat_id = message['message']['chat']['id']
+    text = message['message']['text']
     request_url = "{0}sendMessage?text={1}&chat_id={2}".format(TELEGRAM_API_URL, text, chat_id)
     requests.get(request_url)
     response = {
