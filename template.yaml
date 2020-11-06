@@ -3,7 +3,12 @@ Transform: AWS::Serverless-2016-10-31
 Parameters:
     EnvironmentName:
         Type: String
-        Default: Test
+    StageName:
+        Type: String
+        Default: "dev"
+        AllowedValues:
+            - "dev"
+            - "prod"
     BackendDependenciesStackName:
         Type: String
         Default: 3beepBackendDependencies
@@ -66,8 +71,9 @@ Resources:
         Type: AWS::Serverless::Api
         Properties:
             StageName:
-                Fn::Sub: "${EnvironmentName}"
+                Fn::Sub: "${StageName}"
             Cors: "'*'"
+            OpenApiVersion: "2.0"
     SendMessageFromTelegram:
         Type: AWS::Serverless::Function
         Properties:
@@ -89,7 +95,3 @@ Resources:
                     Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
                 - Fn::ImportValue:
                     Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
-Outputs:
-    TelegramApiGateway:
-        Value:
-            Fn::Sub: 'https://${TelegramApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${EnvironmentName}'
