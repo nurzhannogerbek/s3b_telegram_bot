@@ -1,4 +1,5 @@
 import os
+import requests
 
 
 # Define global variables.
@@ -18,8 +19,11 @@ TELEGRAM_API_URL = "https://api.telegram.org/bot{0}/".format(TELEGRAM_BOT_TOKEN)
 
 
 def lambda_handler(event, context):
+    print(event)
+    chat_id = event['body']['message']['chat']['id']
+    request_url = "{0}sendMessage?text={1}&chat_id={2}".format(TELEGRAM_API_URL, event, chat_id)
+    requests.get(request_url)
     response = {
-        'statusCode': 200,
-        'body': event
+        "statusCode": 200
     }
     return response
