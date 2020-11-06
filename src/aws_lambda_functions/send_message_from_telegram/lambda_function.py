@@ -1,5 +1,5 @@
 import os
-import requests
+from botocore.vendored import requests
 
 
 # Define global variables.
