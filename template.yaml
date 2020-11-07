@@ -31,6 +31,8 @@ Parameters:
         Type: String
     DatabasesLayerARN:
         Type: String
+    RequestsLayerARN:
+        Type: String
 Globals:
     Function:
         Runtime: python3.8
@@ -87,3 +89,4 @@ Resources:
                         Method: POST
             Layers:
                 - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${RequestsLayerARN}"
