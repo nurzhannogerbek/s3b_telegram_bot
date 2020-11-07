@@ -27,10 +27,7 @@ def lambda_handler(event, context):
 
     # Analyze incoming message from the client.
     if text == "/start":
-        text = """
-        Здравствуйте{0}! ✌
-        Чем мы можем Вам помочь?
-        """.format(
+        text = """Здравствуйте{0}! ✌\nЧем мы можем Вам помочь?""".format(
             ", {0}".format(body['message']["from"]["first_name"])
             if body['message']["from"]["first_name"] is not None
             else ""
