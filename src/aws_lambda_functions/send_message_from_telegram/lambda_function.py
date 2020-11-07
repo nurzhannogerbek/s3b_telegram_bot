@@ -20,6 +20,8 @@ TELEGRAM_API_URL = "https://api.telegram.org/bot{0}/".format(TELEGRAM_BOT_TOKEN)
 
 
 def lambda_handler(event, context):
+    print(event['body'])
+
     # Initialize several variables.
     body = json.loads(event['body'])
     chat_id = body['message']['chat']['id']
@@ -27,15 +29,16 @@ def lambda_handler(event, context):
 
     # Analyze incoming message from the client.
     if text == "/start":
+        # Define the username
         text = """Здравствуйте{0}! ✌\nЧем мы можем Вам помочь?""".format(
             ", {0}".format(body['message']["from"]["first_name"])
             if body['message']["from"]["first_name"] is not None
             else ""
         )
 
-    # Send the message to the client in the chatbot.
-    request_url = "{0}sendMessage?text={1}&chat_id={2}".format(TELEGRAM_API_URL, text, chat_id)
-    requests.get(request_url)
+        # Send the message to the client in the bot.
+        request_url = "{0}sendMessage?text={1}&chat_id={2}".format(TELEGRAM_API_URL, text, chat_id)
+        requests.get(request_url)
 
     # Return the status code value of the request.
     return {
