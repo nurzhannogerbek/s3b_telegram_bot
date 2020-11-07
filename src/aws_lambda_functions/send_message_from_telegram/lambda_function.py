@@ -20,13 +20,27 @@ TELEGRAM_API_URL = "https://api.telegram.org/bot{0}/".format(TELEGRAM_BOT_TOKEN)
 
 
 def lambda_handler(event, context):
-    print(event)
-    message = json.loads(event['body'])
-    chat_id = message['message']['chat']['id']
-    text = message['message']['text']
+    # Initialize several variables.
+    body = json.loads(event['body'])
+    chat_id = body['message']['chat']['id']
+    text = body['message']['text']
+
+    # Analyze incoming message from the client.
+    if text == "/start":
+        text = """
+        Здравствуйте{0}! ✌
+        Чем мы можем Вам помочь?
+        """.format(
+            ", {0}".format(body['message']["from"]["first_name"])
+            if body['message']["from"]["first_name"] is not None
+            else ""
+        )
+
+    # Send the message to the client in the chatbot.
     request_url = "{0}sendMessage?text={1}&chat_id={2}".format(TELEGRAM_API_URL, text, chat_id)
     requests.get(request_url)
-    response = {
+
+    # Return the status code value of the request.
+    return {
         "statusCode": 200
     }
-    return response
