@@ -1,17 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Parameters:
-    EnvironmentName:
-        Type: String
-    StageName:
-        Type: String
-        Default: "dev"
-        AllowedValues:
-            - "dev"
-            - "prod"
-    BackendDependenciesStackName:
-        Type: String
-        Default: 3beepBackendDependencies
     CassandraUsername:
         Type: String
     CassandraPassword:
@@ -36,8 +25,15 @@ Parameters:
         Type: String
     TelegramBotToken:
         Type: String
+    EnvironmentName:
+        Type: String
+    StageName:
+        Type: String
+    DatabasesLayerARN:
+        Type: String
 Globals:
     Function:
+        Runtime: python3.8
         MemorySize: 3008
         Timeout: 900
         Environment:
@@ -81,7 +77,6 @@ Resources:
                 Fn::Sub: "${EnvironmentName}SendMessageFromTelegram"
             CodeUri: src/aws_lambda_functions/send_message_from_telegram
             Handler: lambda_function.lambda_handler
-            Runtime: python3.8
             Events:
                 TelegramApiGatewayEvent:
                     Type: Api
@@ -91,7 +86,4 @@ Resources:
                         Path: /send_message_from_telegram
                         Method: POST
             Layers:
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Databases"
-                - Fn::ImportValue:
-                    Fn::Sub: "${EnvironmentName}${BackendDependenciesStackName}:${EnvironmentName}Utils"
+                - Fn::Sub: "${DatabasesLayerARN}"

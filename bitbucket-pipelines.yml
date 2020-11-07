@@ -7,10 +7,6 @@ deploy: &deploy
         - >
           if [ $BITBUCKET_BRANCH == "develop" ];
           then
-            export S3_BUCKET="dev-3beep-telegram-bot"
-            export STACK_NAME="Dev3beepTelegramBot"
-            export STAGE_NAME="dev"
-            export ENVIRONMENT_NAME="Dev"
             export CASSANDRA_USERNAME=$DEV_CASSANDRA_USERNAME
             export CASSANDRA_PASSWORD=$DEV_CASSANDRA_PASSWORD
             export CASSANDRA_HOST=$DEV_CASSANDRA_HOST
@@ -23,14 +19,15 @@ deploy: &deploy
             export POSTGRESQL_PORT=$DEV_POSTGRESQL_PORT
             export POSTGRESQL_DB_NAME=$DEV_POSTGRESQL_DB_NAME
             export TELEGRAM_BOT_TOKEN=$DEV_TELEGRAM_BOT_TOKEN
+            export S3_BUCKET="dev-3beep-telegram-bot"
+            export STACK_NAME="Dev3beepTelegramBot"
+            export STAGE_NAME="dev"
+            export ENVIRONMENT_NAME="Dev"
+            export DATABASES_LAYER_NAME="DevDatabases"
           fi
         - >
           if [ $BITBUCKET_BRANCH == "master" ];
           then
-            export S3_BUCKET="prod-3beep-telegram-bot"
-            export STACK_NAME="Prod3beepTelegramBot"
-            export STAGE_NAME="prod"
-            export ENVIRONMENT_NAME="Prod"
             export CASSANDRA_USERNAME=$PROD_CASSANDRA_USERNAME
             export CASSANDRA_PASSWORD=$PROD_CASSANDRA_PASSWORD
             export CASSANDRA_HOST=$PROD_CASSANDRA_HOST
@@ -43,7 +40,18 @@ deploy: &deploy
             export POSTGRESQL_PORT=$PROD_POSTGRESQL_PORT
             export POSTGRESQL_DB_NAME=$PROD_POSTGRESQL_DB_NAME
             export TELEGRAM_BOT_TOKEN=$PROD_TELEGRAM_BOT_TOKEN
+            export S3_BUCKET="prod-3beep-telegram-bot"
+            export STACK_NAME="Prod3beepTelegramBot"
+            export STAGE_NAME="prod"
+            export ENVIRONMENT_NAME="Prod"
+            export DATABASES_LAYER_NAME="ProdDatabases"
           fi
+        - apt-get update && apt-get install -y python3-pip
+        - pip3 install -U awscli
+        - aws configure set default.region $AWS_DEFAULT_REGION
+        - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+        - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+        - export DATABASES_LAYER_ARN=$(aws lambda list-layer-versions --layer-name $DATABASES_LAYER_NAME --query 'max_by(LayerVersions, &Version).LayerVersionArn'  --output text)
         - pipe: atlassian/aws-sam-deploy:0.5.2
           variables:
             AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
@@ -55,10 +63,6 @@ deploy: &deploy
             SAM_TEMPLATE: 'template.yaml'
             STACK_PARAMETERS: >
               [
-                {
-                  "ParameterKey": "EnvironmentName",
-                  "ParameterValue": ${ENVIRONMENT_NAME}
-                },
                 {
                   "ParameterKey": "StageName",
                   "ParameterValue": ${STAGE_NAME}
@@ -110,6 +114,14 @@ deploy: &deploy
                 {
                   "ParameterKey": "TelegramBotToken",
                   "ParameterValue": ${TELEGRAM_BOT_TOKEN}
+                },
+                {
+                  "ParameterKey": "EnvironmentName",
+                  "ParameterValue": ${ENVIRONMENT_NAME}
+                },
+                {
+                  "ParameterKey": "DatabasesLayerARN",
+                  "ParameterValue": ${DATABASES_LAYER_ARN}
                 }
               ]
             WAIT: 'true'
