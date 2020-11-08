@@ -24,17 +24,22 @@ def lambda_handler(event, context):
 
     # Initialize several variables.
     body = json.loads(event['body'])
-    chat_id = body['message']['chat']['id']
-    text = body['message']['text']
+    message = body.get("message", None)
 
-    # Analyze incoming message from the client.
-    if text == "/start":
-        # Define the username
-        text = """Здравствуйте{0}! ✌\nЧем мы можем Вам помочь?""".format(
-            ", {0}".format(body['message']["from"]["first_name"])
-            if body['message']["from"]["first_name"] is not None
-            else ""
-        )
+    # Check if message is available.
+    if message is not None:
+        chat_id = message['chat']['id']
+        text = body['message']['text']
+
+        # Analyze incoming message from the client.
+        if text == "/start":
+            text = """🤖💬\nЗдравствуйте{0}! ✋\nЧем мы можем Вам помочь?""".format(
+                ", {0}".format(body['message']["from"]["first_name"])
+                if body['message']["from"]["first_name"] is not None
+                else ""
+            )
+        elif text in ["photo", "document", "audio", "sticker"]:
+            text = "🤖💬\nВ данный момент обработка данного формата сообщения невозможна. 🤔\nПросим прощения за неудобства."
 
         # Send the message to the client in the bot.
         request_url = "{0}sendMessage?text={1}&chat_id={2}".format(TELEGRAM_API_URL, text, chat_id)
