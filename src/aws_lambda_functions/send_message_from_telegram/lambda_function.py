@@ -28,8 +28,8 @@ def lambda_handler(event, context):
 
     # Check if message is available.
     if message is not None:
-        chat_id = message['chat']['id']
-        text = body['message']['text']
+        chat_id = message["chat"]["id"]
+        text = message["text"]
 
         # Analyze incoming message from the client.
         if text == "/start":
@@ -38,7 +38,7 @@ def lambda_handler(event, context):
                 if body['message']["from"]["first_name"] is not None
                 else ""
             )
-        elif text in ["photo", "document", "audio", "sticker"]:
+        else:
             text = "🤖💬\nВ данный момент обработка данного формата сообщения невозможна. 🤔\nПросим прощения за неудобства."
 
         # Send the message to the client in the bot.
