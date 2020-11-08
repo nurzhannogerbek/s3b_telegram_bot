@@ -29,7 +29,7 @@ def lambda_handler(event, context):
     # Check if message is available.
     if message is not None:
         chat_id = message["chat"]["id"]
-        text = message["text"]
+        text = message.get("text", None)
 
         # Analyze incoming message from the client.
         if text == "/start":
