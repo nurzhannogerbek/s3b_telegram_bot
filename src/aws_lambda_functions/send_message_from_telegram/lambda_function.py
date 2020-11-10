@@ -114,11 +114,7 @@ def lambda_handler(event, context):
                 # Check the value of the message text which was sent.
                 if message_text == "/start":
                     # Create a welcome message to the client who wrote to the chat bot for the first time.
-                    message_text = """
-                    🤖💬
-                    \nЗдравствуйте{0}!
-                    \nЧем мы можем Вам помочь?
-                    """.format(
+                    message_text = """🤖💬\nЗдравствуйте{0}!\nЧем мы можем Вам помочь?""".format(
                         str()
                         if first_name is None
                         else ", {0}".format(first_name)
@@ -159,7 +155,7 @@ def lambda_handler(event, context):
                         chat_room_id = chat_room_entry.get("chat_room_id", None)
                         channel_id = chat_room_entry.get("channel_id", None)
 
-                        # Record in the database the client who writes to the telegram chat room as a participant in the conversation.
+                        # Record in the database the client who writes to the telegram chat room as a member
                         add_chat_room_member(
                             postgresql_connection,
                             chat_room_id,
@@ -175,7 +171,7 @@ def lambda_handler(event, context):
                             chat_room_id
                         )
                     elif chat_room_status == "completed":
-                        # The main task of this function is to open a previously completed dialog.
+                        # Open a previously completed dialog.
                         activate_closed_chat_room(
                             postgresql_connection,
                             cassandra_connection,
@@ -196,11 +192,8 @@ def lambda_handler(event, context):
                 text = "🤖💬\nHello my brother from another mother!"
                 send_message_to_telegram(text, telegram_chat_id)
         else:
-            message_text = """
-            🤖💬
-            \nОбработка данного формата сообщения в данный момент невозможна.
-            \nПросим прощения за доставленные временные неудобства!
-            """
+            message_text = """🤖💬\nОбработка данного формата сообщения в данный момент невозможна.\nПросим прощения за \
+            доставленные временные неудобства!"""
             send_message_to_telegram(message_text, telegram_chat_id)
 
     # Return the status code value of the request.
