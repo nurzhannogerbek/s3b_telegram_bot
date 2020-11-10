@@ -209,7 +209,7 @@ def lambda_handler(event, context):
 
 """
 Function name:
-get_chat_room
+send_message_to_telegram
 
 Function description:
 The main task of this function is to send a message to Telegram.
@@ -818,7 +818,10 @@ def get_client(postgresql_db_connection, telegram_username):
     postgresql_db_connection.commit()
 
     # Determine information about the chat room from the database.
-    user_id = cursor.fetchone()["user_id"]
+    user_entry = cursor.fetchone()
+    user_id = None
+    if user_entry is not None:
+        user_id = user_entry["user_id"]
 
     # The cursor will be unusable from this point forward.
     cursor.close()
