@@ -441,7 +441,7 @@ def create_identified_user(postgresql_db_connection, first_name, last_name, meta
     ) values(
         '{0}',
         '{1}',
-        '{2}',
+        {2},
         '{3}'
     )
     on conflict on constraint identified_users_telegram_username_key 
