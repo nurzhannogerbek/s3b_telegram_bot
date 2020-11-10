@@ -42,54 +42,6 @@ def lambda_handler(event, context):
     :argument event: The AWS Lambda uses this parameter to pass in event data to the handler.
     :argument context: The AWS Lambda uses this parameter to provide runtime information to your handler.
     """
-    # Since connections with databases were defined outside of the function, we create global variables.
-    global cassandra_connection
-    if not cassandra_connection:
-        try:
-            cassandra_connection = databases.create_cassandra_connection(
-                CASSANDRA_USERNAME,
-                CASSANDRA_PASSWORD,
-                CASSANDRA_HOST,
-                CASSANDRA_PORT,
-                CASSANDRA_LOCAL_DC
-            )
-        except Exception as error:
-            logger.error(error)
-            sys.exit(1)
-    global postgresql_connection
-    if not postgresql_connection:
-        try:
-            postgresql_connection = databases.create_postgresql_connection(
-                POSTGRESQL_USERNAME,
-                POSTGRESQL_PASSWORD,
-                POSTGRESQL_HOST,
-                POSTGRESQL_PORT,
-                POSTGRESQL_DB_NAME
-            )
-        except Exception as error:
-            logger.error(error)
-            sys.exit(1)
-
-    # Set the name of the keyspace you will be working with.
-    # This statement must fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
-    success = False
-    while not success:
-        try:
-            cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
-            success = True
-        except Exception as error:
-            try:
-                cassandra_connection = databases.create_cassandra_connection(
-                    CASSANDRA_USERNAME,
-                    CASSANDRA_PASSWORD,
-                    CASSANDRA_HOST,
-                    CASSANDRA_PORT,
-                    CASSANDRA_LOCAL_DC
-                )
-            except Exception as error:
-                logger.error(error)
-                sys.exit(1)
-
     # Parse the JSON object.
     body = json.loads(event['body'])
     message = body.get("message", None)
@@ -121,13 +73,66 @@ def lambda_handler(event, context):
                     )
                     send_message_to_telegram(message_text, telegram_chat_id)
                 else:
+                    # Since connections with databases were defined outside of the function, we create global variables.
+                    global cassandra_connection
+                    if not cassandra_connection:
+                        try:
+                            cassandra_connection = databases.create_cassandra_connection(
+                                CASSANDRA_USERNAME,
+                                CASSANDRA_PASSWORD,
+                                CASSANDRA_HOST,
+                                CASSANDRA_PORT,
+                                CASSANDRA_LOCAL_DC
+                            )
+                        except Exception as error:
+                            logger.error(error)
+                            sys.exit(1)
+                    global postgresql_connection
+                    if not postgresql_connection:
+                        try:
+                            postgresql_connection = databases.create_postgresql_connection(
+                                POSTGRESQL_USERNAME,
+                                POSTGRESQL_PASSWORD,
+                                POSTGRESQL_HOST,
+                                POSTGRESQL_PORT,
+                                POSTGRESQL_DB_NAME
+                            )
+                        except Exception as error:
+                            logger.error(error)
+                            sys.exit(1)
+
+                    # Set the name of the keyspace you will be working with.
+                    # This statement must fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
+                    success = False
+                    while not success:
+                        try:
+                            cassandra_connection.set_keyspace(CASSANDRA_KEYSPACE_NAME)
+                            success = True
+                        except Exception as error:
+                            try:
+                                cassandra_connection = databases.create_cassandra_connection(
+                                    CASSANDRA_USERNAME,
+                                    CASSANDRA_PASSWORD,
+                                    CASSANDRA_HOST,
+                                    CASSANDRA_PORT,
+                                    CASSANDRA_LOCAL_DC
+                                )
+                            except Exception as error:
+                                logger.error(error)
+                                sys.exit(1)
+
                     # Get information about the specific chat room from the PostgreSQL database.
                     chat_room_entry = get_chat_room(postgresql_connection, telegram_chat_id)
 
                     # Define several variables that will be used in the future.
-                    chat_room_id = chat_room_entry.get("chat_room_id", None)
-                    channel_id = chat_room_entry.get("channel_id", None)
-                    chat_room_status = chat_room_entry.get("chat_room_status", None)
+                    if chat_room_entry is None:
+                        chat_room_id = None
+                        channel_id = None
+                        chat_room_status = None
+                    else:
+                        chat_room_id = chat_room_entry["chat_room_id"]
+                        channel_id = chat_room_entry["channel_id"]
+                        chat_room_status = chat_room_entry["chat_room_status"]
 
                     # Define the variable with the ID of the client.
                     client_id = get_client(postgresql_connection, telegram_username)
