@@ -451,7 +451,7 @@ def create_identified_user(postgresql_db_connection, first_name, last_name, meta
     """.format(
         first_name,
         last_name,
-        metadata,
+        "'{0}'".format(metadata.replace("'", "''")),
         telegram_username
     )
 
