@@ -197,8 +197,7 @@ def lambda_handler(event, context):
                 text = "🤖💬\nHello my brother from another mother!"
                 send_message_to_telegram(text, telegram_chat_id)
         else:
-            message_text = """🤖💬\nОбработка данного формата сообщения в данный момент невозможна.\nПросим прощения за \
-            доставленные временные неудобства!"""
+            message_text = """🤖💬\nОбработка данного формата сообщения в данный момент невозможна.\nПросим прощения за доставленные временные неудобства!"""
             send_message_to_telegram(message_text, telegram_chat_id)
 
     # Return the status code value of the request.
@@ -303,7 +302,7 @@ def create_chat_room(postgresql_db_connection, cassandra_db_connection, client_i
     limit 1
     returning
     	chat_room_id,
-    	channel_id
+    	channel_id,
     	chat_room_status;
     """.format(
         chat_room_id,
