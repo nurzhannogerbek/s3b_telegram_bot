@@ -153,13 +153,13 @@ def lambda_handler(event, context):
         sys.exit(1)
 
     # Send a message to the Telegram chat room.
-    request_url = "{0}sendMessage?text={1}&chat_id={2}".format(
-        TELEGRAM_API_URL,
-        "🙂💬\n{0}".format(message_text),
-        telegram_chat_id
-    )
+    request_url = "{0}sendMessage".format(TELEGRAM_API_URL)
+    params = {
+        'text': "🙂💬\n{0}".format(message_text),
+        'chat_id': telegram_chat_id
+    }
     try:
-        response = requests.get(request_url)
+        response = requests.get(request_url, params=params)
         response.raise_for_status()
     except Exception as error:
         logger.error(error)
