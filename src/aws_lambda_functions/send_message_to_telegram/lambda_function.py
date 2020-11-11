@@ -3,6 +3,7 @@ import utils
 import logging
 import sys
 import os
+import json
 import requests
 import uuid
 from cassandra.query import SimpleStatement, dict_factory
@@ -68,6 +69,8 @@ def lambda_handler(event, context):
         except Exception as error:
             logger.error(error)
             sys.exit(1)
+
+    print(event)
 
     # Define the values of the data passed to the function.
     chat_room_id = event["arguments"]["input"]["chatRoomId"]
