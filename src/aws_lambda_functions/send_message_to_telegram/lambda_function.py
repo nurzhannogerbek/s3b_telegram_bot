@@ -408,5 +408,5 @@ def lambda_handler(event, context):
     # Return the object with information about created chat room message.
     return {
         "statusCode": 200,
-        "body": chat_room_message
+        "body": json.dumps(chat_room_message)
     }
