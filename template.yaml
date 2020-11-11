@@ -31,6 +31,8 @@ Parameters:
         Type: String
     DatabasesLayerARN:
         Type: String
+    UtilsLayerARN:
+        Type: String
     RequestsLayerARN:
         Type: String
 Globals:
@@ -89,4 +91,23 @@ Resources:
                         Method: POST
             Layers:
                 - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${RequestsLayerARN}"
+    SendMessageToTelegram:
+        Type: AWS::Serverless::Function
+        Properties:
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}SendMessageToTelegram"
+            CodeUri: src/aws_lambda_functions/send_message_to_telegram
+            Handler: lambda_function.lambda_handler
+            Events:
+                TelegramApiGatewayEvent:
+                    Type: Api
+                    Properties:
+                        RestApiId:
+                            Ref: TelegramApiGateway
+                        Path: /send_message_to_telegram
+                        Method: POST
+            Layers:
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${UtilsLayerARN}"
                 - Fn::Sub: "${RequestsLayerARN}"

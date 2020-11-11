@@ -220,6 +220,7 @@ def send_message_to_telegram(message_text, telegram_chat_id):
         response.raise_for_status()
     except Exception as error:
         logger.error(error)
+        sys.exit(1)
     return None
 
 

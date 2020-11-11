@@ -24,6 +24,7 @@ deploy: &deploy
             export STAGE_NAME="dev"
             export ENVIRONMENT_NAME="Dev"
             export DATABASES_LAYER_NAME="DevDatabases"
+            export $UTILS_LAYER_NAME="DevUtils"
             export REQUESTS_LAYER_NAME="DevRequests"
           fi
         - >
@@ -46,6 +47,7 @@ deploy: &deploy
             export STAGE_NAME="prod"
             export ENVIRONMENT_NAME="Prod"
             export DATABASES_LAYER_NAME="ProdDatabases"
+            export $UTILS_LAYER_NAME="ProdUtils"
             export REQUESTS_LAYER_NAME="ProdRequests"
           fi
         - apt-get update && apt-get install -y python3-pip
@@ -54,6 +56,7 @@ deploy: &deploy
         - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
         - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
         - export DATABASES_LAYER_ARN=$(aws lambda list-layer-versions --layer-name $DATABASES_LAYER_NAME --query 'max_by(LayerVersions, &Version).LayerVersionArn'  --output text)
+        - export UTILS_LAYER_ARN=$(aws lambda list-layer-versions --layer-name $UTILS_LAYER_NAME --query 'max_by(LayerVersions, &Version).LayerVersionArn'  --output text)
         - export REQUESTS_LAYER_ARN=$(aws lambda list-layer-versions --layer-name $REQUESTS_LAYER_NAME --query 'max_by(LayerVersions, &Version).LayerVersionArn'  --output text)
         - pipe: atlassian/aws-sam-deploy:0.5.2
           variables:
@@ -125,6 +128,10 @@ deploy: &deploy
                 {
                   "ParameterKey": "DatabasesLayerARN",
                   "ParameterValue": ${DATABASES_LAYER_ARN}
+                },
+                {
+                  "ParameterKey": "UtilsLayerARN",
+                  "ParameterValue": ${UTILS_LAYER_ARN}
                 },
                 {
                   "ParameterKey": "RequestsLayerARN",
