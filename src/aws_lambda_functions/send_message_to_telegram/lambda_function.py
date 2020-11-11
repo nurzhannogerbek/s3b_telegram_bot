@@ -70,43 +70,44 @@ def lambda_handler(event, context):
             logger.error(error)
             sys.exit(1)
 
-    print(event)
+    # Parse the JSON object.
+    body = json.loads(event['body'])
 
     # Define the values of the data passed to the function.
-    chat_room_id = event["arguments"]["input"]["chatRoomId"]
-    message_author_id = event["arguments"]["input"]["messageAuthorId"]
-    message_channel_id = event["arguments"]["input"]["messageChannelId"]
-    message_type = event["arguments"]["input"]["messageType"]
+    chat_room_id = body["arguments"]["input"]["chatRoomId"]
+    message_author_id = body["arguments"]["input"]["messageAuthorId"]
+    message_channel_id = body["arguments"]["input"]["messageChannelId"]
+    message_type = body["arguments"]["input"]["messageType"]
     try:
-        message_text = event["arguments"]["input"]["messageText"]
+        message_text = body["arguments"]["input"]["messageText"]
     except KeyError:
         message_text = None
     try:
-        message_content_url = event["arguments"]["input"]["messageContentUrl"]
+        message_content_url = body["arguments"]["input"]["messageContentUrl"]
     except KeyError:
         message_content_url = None
     try:
-        quoted_message_id = event["arguments"]["input"]["quotedMessage"]["messageId"]
+        quoted_message_id = body["arguments"]["input"]["quotedMessage"]["messageId"]
     except KeyError:
         quoted_message_id = None
     try:
-        quoted_message_author_id = event["arguments"]["input"]["quotedMessage"]["messageAuthorId"]
+        quoted_message_author_id = body["arguments"]["input"]["quotedMessage"]["messageAuthorId"]
     except KeyError:
         quoted_message_author_id = None
     try:
-        quoted_message_channel_id = event["arguments"]["input"]["quotedMessage"]["messageChannelId"]
+        quoted_message_channel_id = body["arguments"]["input"]["quotedMessage"]["messageChannelId"]
     except KeyError:
         quoted_message_channel_id = None
     try:
-        quoted_message_type = event["arguments"]["input"]["quotedMessage"]["messageType"]
+        quoted_message_type = body["arguments"]["input"]["quotedMessage"]["messageType"]
     except KeyError:
         quoted_message_type = None
     try:
-        quoted_message_text = event["arguments"]["input"]["quotedMessage"]["messageText"]
+        quoted_message_text = body["arguments"]["input"]["quotedMessage"]["messageText"]
     except KeyError:
         quoted_message_text = None
     try:
-        quoted_message_content_url = event["arguments"]["input"]["quotedMessage"]["messageContentUrl"]
+        quoted_message_content_url = body["arguments"]["input"]["quotedMessage"]["messageContentUrl"]
     except KeyError:
         quoted_message_content_url = None
 
