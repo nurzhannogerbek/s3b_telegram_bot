@@ -51,8 +51,8 @@ def lambda_handler(event, context):
     body = json.loads(event['body'])
 
     # Define the values of the data passed to the function.
-    chat_room_id = body["arguments"]["input"]["chat_room_id"]
-    notification_description = body["arguments"]["input"]["notification_description"]
+    chat_room_id = body["arguments"]["input"]["chatRoomId"]
+    notification_description = body["arguments"]["input"]["notificationDescription"]
 
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
