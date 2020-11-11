@@ -214,9 +214,14 @@ Function description:
 The main task of this function is to send a message to Telegram.
 """
 def send_message_to_telegram(message_text, telegram_chat_id):
-    request_url = "{0}sendMessage?text={1}&chat_id={2}".format(TELEGRAM_API_URL, message_text, telegram_chat_id)
+    # Send a message to the Telegram chat room.
+    request_url = "{0}sendMessage".format(TELEGRAM_API_URL)
+    params = {
+        'text': "🙂💬\n{0}".format(message_text),
+        'chat_id': telegram_chat_id
+    }
     try:
-        response = requests.get(request_url)
+        response = requests.get(request_url, params=params)
         response.raise_for_status()
     except Exception as error:
         logger.error(error)
@@ -910,4 +915,6 @@ def update_chat_room_last_message(postgresql_db_connection, cassandra_db_connect
         sys.exit(1)
 
     # Return nothing.
-    return None
+    return {
+        "statusCode": 200
+    }
