@@ -23,6 +23,8 @@ deploy: &deploy
             export STACK_NAME="Dev3beepTelegramBot"
             export STAGE_NAME="dev"
             export ENVIRONMENT_NAME="Dev"
+            export AUTH0_DOMAIN=$DEV_AUTH0_DOMAIN
+            export AUTH0_AUDIENCE=$DEV_AUTH0_AUDIENCE
             export DATABASES_LAYER_NAME="DevDatabases"
             export UTILS_LAYER_NAME="DevUtils"
             export REQUESTS_LAYER_NAME="DevRequests"
@@ -46,6 +48,8 @@ deploy: &deploy
             export STACK_NAME="Prod3beepTelegramBot"
             export STAGE_NAME="prod"
             export ENVIRONMENT_NAME="Prod"
+            export AUTH0_DOMAIN=$PROD_AUTH0_DOMAIN
+            export AUTH0_AUDIENCE=$PROD_AUTH0_AUDIENCE
             export DATABASES_LAYER_NAME="ProdDatabases"
             export UTILS_LAYER_NAME="ProdUtils"
             export REQUESTS_LAYER_NAME="ProdRequests"
@@ -124,6 +128,14 @@ deploy: &deploy
                 {
                   "ParameterKey": "EnvironmentName",
                   "ParameterValue": ${ENVIRONMENT_NAME}
+                },
+                {
+                  "ParameterKey": "Auth0Domain",
+                  "ParameterValue": ${AUTH0_DOMAIN}
+                },
+                {
+                  "ParameterKey": "Auth0Audience",
+                  "ParameterValue": ${AUTH0_AUDIENCE}
                 },
                 {
                   "ParameterKey": "DatabasesLayerARN",

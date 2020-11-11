@@ -23,6 +23,10 @@ Parameters:
         Type: String
     PostgreSQLDBName:
         Type: String
+    Auth0Domain:
+        Type: String
+    Auth0Audience:
+        Type: String
     TelegramBotToken:
         Type: String
     EnvironmentName:
@@ -72,7 +76,23 @@ Resources:
         Properties:
             StageName:
                 Fn::Sub: "${StageName}"
-            CorsConfiguration: True
+            CorsConfiguration:
+                AllowMethods:
+                    - GET
+                    - POST
+                AllowHeaders:
+                    - "*"
+                AllowOrigins:
+                    - "*"
+            Auth:
+                Authorizers:
+                    Auth0Authorizer:
+                        JwtConfiguration:
+                            issuer:
+                                Fn::Sub: "${Auth0Domain}"
+                            audience:
+                                - Fn::Sub: "${Auth0Audience}"
+                        IdentitySource: "$request.header.Authorization"
     SendMessageFromTelegram:
         Type: AWS::Serverless::Function
         Properties:
@@ -106,6 +126,8 @@ Resources:
                             Ref: TelegramApiGateway
                         Path: /send_message_to_telegram
                         Method: POST
+                        Auth:
+                            Authorizer: Auth0Authorizer
             Layers:
                 - Fn::Sub: "${DatabasesLayerARN}"
                 - Fn::Sub: "${UtilsLayerARN}"
@@ -125,6 +147,8 @@ Resources:
                             Ref: TelegramApiGateway
                         Path: /send_notification_to_telegram
                         Method: POST
+                        Auth:
+                            Authorizer: Auth0Authorizer
             Layers:
                 - Fn::Sub: "${DatabasesLayerARN}"
                 - Fn::Sub: "${RequestsLayerARN}"
