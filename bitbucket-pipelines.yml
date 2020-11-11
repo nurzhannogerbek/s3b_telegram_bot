@@ -24,7 +24,7 @@ deploy: &deploy
             export STAGE_NAME="dev"
             export ENVIRONMENT_NAME="Dev"
             export DATABASES_LAYER_NAME="DevDatabases"
-            export $UTILS_LAYER_NAME="DevUtils"
+            export UTILS_LAYER_NAME="DevUtils"
             export REQUESTS_LAYER_NAME="DevRequests"
           fi
         - >
@@ -47,7 +47,7 @@ deploy: &deploy
             export STAGE_NAME="prod"
             export ENVIRONMENT_NAME="Prod"
             export DATABASES_LAYER_NAME="ProdDatabases"
-            export $UTILS_LAYER_NAME="ProdUtils"
+            export UTILS_LAYER_NAME="ProdUtils"
             export REQUESTS_LAYER_NAME="ProdRequests"
           fi
         - apt-get update && apt-get install -y python3-pip
