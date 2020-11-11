@@ -406,4 +406,7 @@ def lambda_handler(event, context):
         chat_room_message["channelId"] = channel_id
 
     # Return the object with information about created chat room message.
-    return chat_room_message
+    return {
+        "statusCode": 200,
+        "body": chat_room_message
+    }
