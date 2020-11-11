@@ -86,7 +86,7 @@ def lambda_handler(event, context):
     # Send a message to the Telegram chat room.
     request_url = "{0}sendMessage".format(TELEGRAM_API_URL)
     params = {
-        'text': "🙂💬\n{0}".format(notification_description),
+        'text': "🤖💬\n{0}".format(notification_description),
         'chat_id': telegram_chat_id
     }
     try:

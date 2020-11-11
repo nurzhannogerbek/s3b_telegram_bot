@@ -217,7 +217,7 @@ def send_message_to_telegram(message_text, telegram_chat_id):
     # Send a message to the Telegram chat room.
     request_url = "{0}sendMessage".format(TELEGRAM_API_URL)
     params = {
-        'text': "🙂💬\n{0}".format(message_text),
+        'text': message_text,
         'chat_id': telegram_chat_id
     }
     try:
