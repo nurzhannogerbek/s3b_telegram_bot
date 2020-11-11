@@ -111,3 +111,21 @@ Resources:
                 - Fn::Sub: "${DatabasesLayerARN}"
                 - Fn::Sub: "${UtilsLayerARN}"
                 - Fn::Sub: "${RequestsLayerARN}"
+    SendNotificationToTelegram:
+        Type: AWS::Serverless::Function
+        Properties:
+            FunctionName:
+                Fn::Sub: "${EnvironmentName}SendNotificationToTelegram"
+            CodeUri: src/aws_lambda_functions/send_notification_to_telegram
+            Handler: lambda_function.lambda_handler
+            Events:
+                TelegramApiGatewayEvent:
+                    Type: Api
+                    Properties:
+                        RestApiId:
+                            Ref: TelegramApiGateway
+                        Path: /send_notification_to_telegram
+                        Method: POST
+            Layers:
+                - Fn::Sub: "${DatabasesLayerARN}"
+                - Fn::Sub: "${RequestsLayerARN}"
