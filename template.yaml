@@ -68,12 +68,11 @@ Globals:
                     Fn::Sub: "${TelegramBotToken}"
 Resources:
     TelegramApiGateway:
-        Type: AWS::Serverless::Api
+        Type: AWS::Serverless::HttpApi
         Properties:
             StageName:
                 Fn::Sub: "${StageName}"
-            Cors: "'*'"
-            OpenApiVersion: "3.0.3"
+            CorsConfiguration: True
     SendMessageFromTelegram:
         Type: AWS::Serverless::Function
         Properties:
@@ -83,9 +82,9 @@ Resources:
             Handler: lambda_function.lambda_handler
             Events:
                 TelegramApiGatewayEvent:
-                    Type: Api
+                    Type: HttpApi
                     Properties:
-                        RestApiId:
+                        ApiId:
                             Ref: TelegramApiGateway
                         Path: /send_message_from_telegram
                         Method: POST
@@ -101,9 +100,9 @@ Resources:
             Handler: lambda_function.lambda_handler
             Events:
                 TelegramApiGatewayEvent:
-                    Type: Api
+                    Type: HttpApi
                     Properties:
-                        RestApiId:
+                        ApiId:
                             Ref: TelegramApiGateway
                         Path: /send_message_to_telegram
                         Method: POST
@@ -120,9 +119,9 @@ Resources:
             Handler: lambda_function.lambda_handler
             Events:
                 TelegramApiGatewayEvent:
-                    Type: Api
+                    Type: HttpApi
                     Properties:
-                        RestApiId:
+                        ApiId:
                             Ref: TelegramApiGateway
                         Path: /send_notification_to_telegram
                         Method: POST
