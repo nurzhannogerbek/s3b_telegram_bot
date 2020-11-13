@@ -10,6 +10,7 @@ from cassandra.query import SimpleStatement, dict_factory
 from cassandra import ConsistencyLevel
 from psycopg2.extras import RealDictCursor
 
+
 """
 Define connections to databases outside of the "lambda_handler" function.
 Connections to databases will be created the first time the function is called.
@@ -117,15 +118,15 @@ def lambda_handler(event, context):
     # Prepare the SQL request that gives the minimal information about the specific chat room.
     statement = """
     select
-	    chat_rooms.channel_id,
-	    chat_rooms.chat_room_status,
-	    telegram_chat_rooms.telegram_chat_id
+        chat_rooms.channel_id,
+        chat_rooms.chat_room_status,
+        telegram_chat_rooms.telegram_chat_id
     from
-	    chat_rooms
+        chat_rooms
     left join telegram_chat_rooms on
-	    chat_rooms.chat_room_id = telegram_chat_rooms.chat_room_id
+        chat_rooms.chat_room_id = telegram_chat_rooms.chat_room_id
     where
-	    chat_rooms.chat_room_id = '{0}'
+        chat_rooms.chat_room_id = '{0}'
     limit 1;
     """.format(chat_room_id)
 

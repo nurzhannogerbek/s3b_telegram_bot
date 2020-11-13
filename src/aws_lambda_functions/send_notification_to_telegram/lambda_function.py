@@ -60,13 +60,13 @@ def lambda_handler(event, context):
     # Prepare the SQL request that gives the minimal information about the specific chat room.
     statement = """
     select
-    	telegram_chat_rooms.telegram_chat_id
+        telegram_chat_rooms.telegram_chat_id
     from
-    	chat_rooms
+        chat_rooms
     left join telegram_chat_rooms on
-    	chat_rooms.chat_room_id = telegram_chat_rooms.chat_room_id
+        chat_rooms.chat_room_id = telegram_chat_rooms.chat_room_id
     where
-    	chat_rooms.chat_room_id = '{0}'
+        chat_rooms.chat_room_id = '{0}'
     limit 1;
     """.format(chat_room_id)
 

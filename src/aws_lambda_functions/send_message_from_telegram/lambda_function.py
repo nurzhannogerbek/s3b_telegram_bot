@@ -9,7 +9,6 @@ from cassandra.query import SimpleStatement
 from cassandra import ConsistencyLevel
 from psycopg2.extras import RealDictCursor
 
-
 """
 Define connections to databases outside of the "lambda_handler" function.
 Connections to databases will be created the first time the function is called.
@@ -102,7 +101,7 @@ def lambda_handler(event, context):
                             sys.exit(1)
 
                     # Set the name of the keyspace you will be working with.
-                    # This statement must fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
+                    # This statement fix ERROR NoHostAvailable: ('Unable to complete the operation against any hosts').
                     success = False
                     while not success:
                         try:
@@ -197,7 +196,8 @@ def lambda_handler(event, context):
                 text = "🤖💬\nHello my brother from another mother!"
                 send_message_to_telegram(text, telegram_chat_id)
         else:
-            message_text = """🤖💬\nОбработка данного формата сообщения в данный момент невозможна.\nПросим прощения за доставленные временные неудобства!"""
+            message_text = """🤖💬\nОбработка данного формата сообщения в данный момент невозможна.\nПросим прощения 
+            за доставленные временные неудобства! """
             send_message_to_telegram(message_text, telegram_chat_id)
 
     # Return the status code value of the request.
@@ -206,14 +206,14 @@ def lambda_handler(event, context):
     }
 
 
-"""
-Function name:
-send_message_to_telegram
-
-Function description:
-The main task of this function is to send a message to Telegram.
-"""
 def send_message_to_telegram(message_text, telegram_chat_id):
+    """
+    Function name:
+    send_message_to_telegram
+
+    Function description:
+    The main task of this function is to send a message to Telegram.
+    """
     # Send a message to the Telegram chat room.
     request_url = "{0}sendMessage".format(TELEGRAM_API_URL)
     params = {
@@ -229,14 +229,14 @@ def send_message_to_telegram(message_text, telegram_chat_id):
     return None
 
 
-"""
-Function name:
-get_chat_room
-
-Function description:
-The main task of this function is to give information about a specific chat room.
-"""
 def get_chat_room(postgresql_db_connection, telegram_chat_id):
+    """
+    Function name:
+    get_chat_room
+
+    Function description:
+    The main task of this function is to give information about a specific chat room.
+    """
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
 
@@ -275,14 +275,14 @@ def get_chat_room(postgresql_db_connection, telegram_chat_id):
     return chat_room_entry
 
 
-"""
-Function name:
-create_chat_room
-
-Function description:
-The main task of this function is to create a chat room in the database.
-"""
 def create_chat_room(postgresql_db_connection, cassandra_db_connection, client_id, telegram_chat_id):
+    """
+    Function name:
+    create_chat_room
+
+    Function description:
+    The main task of this function is to create a chat room in the database.
+    """
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
 
@@ -293,22 +293,22 @@ def create_chat_room(postgresql_db_connection, cassandra_db_connection, client_i
     statement = """
     insert into chat_rooms (
         chat_room_id,
-    	channel_id,
-    	chat_room_status
+        channel_id,
+        chat_room_status
     )
     select
         '{0}' as chat_room_id,
-    	channel_id,
-    	'non_accepted' as chat_room_status
+        channel_id,
+        'non_accepted' as chat_room_status
     from 
-    	channels
+        channels
     where
-    	channel_technical_id = '{1}'
+        channel_technical_id = '{1}'
     limit 1
     returning
-    	chat_room_id,
-    	channel_id,
-    	chat_room_status;
+        chat_room_id,
+        channel_id,
+        chat_room_status;
     """.format(
         chat_room_id,
         TELEGRAM_BOT_TOKEN
@@ -331,10 +331,10 @@ def create_chat_room(postgresql_db_connection, cassandra_db_connection, client_i
     statement = """
     insert into telegram_chat_rooms (
         chat_room_id,
-    	telegram_chat_id
+        telegram_chat_id
     ) values (
-    	'{0}',
-    	'{1}'
+        '{0}',
+        '{1}'
     );
     """.format(
         chat_room_entry["chat_room_id"],
@@ -354,20 +354,20 @@ def create_chat_room(postgresql_db_connection, cassandra_db_connection, client_i
     # Prepare the SQL request that allows to get the list of departments that serve the specific this channel.
     statement = """
     select
-	    array_agg(distinct organization_id)::varchar[] as organizations_ids
+        array_agg(distinct organization_id)::varchar[] as organizations_ids
     from
-	    channels
+        channels
     left join channel_types on
-	    channels.channel_type_id = channel_types.channel_type_id
+        channels.channel_type_id = channel_types.channel_type_id
     left join channels_organizations_relationship on
-	    channels.channel_id = channels_organizations_relationship.channel_id
+        channels.channel_id = channels_organizations_relationship.channel_id
     where
-	    channels.channel_technical_id = '{0}'
+        channels.channel_technical_id = '{0}'
     and
-	    lower(channel_types.channel_type_name) = lower('telegram')
+        lower(channel_types.channel_type_name) = lower('telegram')
     group by
-	    channels.channel_id,
-	    channel_types.channel_type_id
+        channels.channel_id,
+        channel_types.channel_type_id
     limit 1;
     """.format(TELEGRAM_BOT_TOKEN.replace("'", "''"))
 
@@ -424,14 +424,14 @@ def create_chat_room(postgresql_db_connection, cassandra_db_connection, client_i
     return chat_room_entry
 
 
-"""
-Function name:
-create_identified_user
-
-Function description:
-The main task of this function is to create a identified user in the database.
-"""
 def create_identified_user(postgresql_db_connection, first_name, last_name, metadata, telegram_username):
+    """
+    Function name:
+    create_identified_user
+
+    Function description:
+    The main task of this function is to create a identified user in the database.
+    """
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
 
@@ -497,14 +497,14 @@ def create_identified_user(postgresql_db_connection, first_name, last_name, meta
     return user_id
 
 
-"""
-Function name:
-create_chat_room_message
-
-Function description:
-The main task of this function is to add a new message from the client to the Cassandra database.
-"""
 def create_chat_room_message(cassandra_db_connection, chat_room_id, client_id, channel_id, message_text):
+    """
+    Function name:
+    create_chat_room_message
+
+    Function description:
+    The main task of this function is to add a new message from the client to the Cassandra database.
+    """
     # The data type of the 'message_id' column is 'timeuuid'.
     message_id = uuid.uuid1()
 
@@ -575,14 +575,14 @@ def create_chat_room_message(cassandra_db_connection, chat_room_id, client_id, c
     return None
 
 
-"""
-Function name:
-add_chat_room_member
-
-Function description:
-The main task of this function is to add a client who writes to the telegram bot as a member of the chat room.
-"""
 def add_chat_room_member(postgresql_db_connection, chat_room_id, client_id):
+    """
+    Function name:
+    add_chat_room_member
+
+    Function description:
+    The main task of this function is to add a client who writes to the telegram bot as a member of the chat room.
+    """
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
 
@@ -617,14 +617,14 @@ def add_chat_room_member(postgresql_db_connection, chat_room_id, client_id):
     return None
 
 
-"""
-Function name:
-activate_closed_chat_room
-
-Function description:
-The main task of this function is to add a client who writes to the telegram bot as a member of the chat room.
-"""
 def activate_closed_chat_room(postgresql_db_connection, cassandra_db_connection, chat_room_id, channel_id, client_id):
+    """
+    Function name:
+    activate_closed_chat_room
+
+    Function description:
+    The main task of this function is to add a client who writes to the telegram bot as a member of the chat room.
+    """
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
 
@@ -781,33 +781,33 @@ def activate_closed_chat_room(postgresql_db_connection, cassandra_db_connection,
     return None
 
 
-"""
-Function name:
-get_client
-
-Function description:
-The main purpose of this function is to get information about the client.
-"""
 def get_client(postgresql_db_connection, telegram_username):
+    """
+    Function name:
+    get_client
+
+    Function description:
+    The main purpose of this function is to get information about the client.
+    """
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
 
     # Check if the database has information for the specific telegram username.
     statement = """
     select
-	    users.user_id
+        users.user_id
     from
-	    users
+        users
     left join identified_users on
-	    users.identified_user_id = identified_users.identified_user_id
+        users.identified_user_id = identified_users.identified_user_id
     where
-	    users.identified_user_id is not null
+        users.identified_user_id is not null
     and
-	    users.internal_user_id is null
+        users.internal_user_id is null
     and
-	    users.unidentified_user_id is null
+        users.unidentified_user_id is null
     and
-	    identified_users.telegram_username = '{0}'
+        identified_users.telegram_username = '{0}'
     limit 1;
     """.format(telegram_username)
 
@@ -834,14 +834,15 @@ def get_client(postgresql_db_connection, telegram_username):
     return user_id
 
 
-"""
-Function name:
-update_chat_room_last_message
+def update_chat_room_last_message(postgresql_db_connection, cassandra_db_connection, message_text, channel_id,
+                                  chat_room_id):
+    """
+    Function name:
+    update_chat_room_last_message
 
-Function description:
-The main purpose of this function is to update the last chat room message.
-"""
-def update_chat_room_last_message(postgresql_db_connection, cassandra_db_connection, message_text, channel_id, chat_room_id):
+    Function description:
+    The main purpose of this function is to update the last chat room message.
+    """
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
 
