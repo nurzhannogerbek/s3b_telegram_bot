@@ -57,7 +57,7 @@ def lambda_handler(event, context):
     message_channel_id = body["arguments"]["input"]["messageChannelId"]
     message_type = body["arguments"]["input"]["messageType"]
     try:
-        message_text = "🙂💬\n".format(body["arguments"]["input"]["messageText"])
+        message_text = "🙂💬\n{0}".format(body["arguments"]["input"]["messageText"])
     except KeyError:
         message_text = None
     try:
