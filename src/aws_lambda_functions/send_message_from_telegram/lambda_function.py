@@ -161,30 +161,30 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
     """
     # Define the GraphQL mutation query to the AppSync.
     query = """
-    mutation CreateChatRoom {
+    mutation CreateChatRoom {{
         createChatRoom(
-            input: {
+            input: {{
                 channelTechnicalId: "{0}",
                 channelTypeName: "{1}",
                 clientId: "{2}",
                 telegramChatId: "{3}"
-            }
-        ) {
-            channel {
+            }}
+        ) {{
+            channel {{
                 channelDescription
                 channelId
                 channelName
                 channelTechnicalId
-                channelType {
+                channelType {{
                     channelTypeDescription
                     channelTypeId
                     channelTypeName
-                }
-            }
+                }}
+            }}
             channelId
             chatRoomId
             chatRoomStatus
-            client {
+            client {{
                 userType
                 userSecondaryPhoneNumber
                 userSecondaryEmail
@@ -196,12 +196,12 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
                 userId
                 userFirstName
                 metadata
-                gender {
+                gender {{
                     genderId
                     genderPublicName
                     genderTechnicalName
-                }
-                country {
+                }}
+                country {{
                     countryAlpha2Code
                     countryAlpha3Code
                     countryCodeTopLevelDomain
@@ -209,11 +209,11 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
                     countryId
                     countryOfficialName
                     countryShortName
-                }
-            }
+                }}
+            }}
             organizationsIds
-        }
-    }
+        }}
+    }}
     """.format(
         channel_technical_id,
         channel_type_name,
@@ -256,25 +256,25 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
     The main task of this function is to create the message in the specific chat room.
     """
     query = """
-    mutation CreateChatRoomMessage {
+    mutation CreateChatRoomMessage {{
         createChatRoomMessage(
-            input: {
+            input: {{
                 chatRoomId: "{0}",
                 messageAuthorId: "{1}",
                 messageChannelId: "{2}",
                 messageType: "{3}",
                 messageText: {4},
                 messageContentUrl: null,
-                quotedMessage: {
+                quotedMessage: {{
                     messageAuthorId: null,
                     messageChannelId: null,
                     messageContentUrl: null,
                     messageId: null,
                     messageText: null,
                     messageType: null
-                }
-            }
-        ) {
+                }}
+            }}
+        ) {{
             channelId
             chatRoomId
             messageAuthorId
@@ -289,16 +289,16 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
             messageText
             messageType
             messageUpdatedDateTime
-            quotedMessage {
+            quotedMessage {{
                 messageAuthorId
                 messageChannelId
                 messageContentUrl
                 messageId
                 messageText
                 messageType
-            }
-        }
-    }
+            }}
+        }}
+    }}
     """.format(
         chat_room_id,
         message_author_id,
@@ -340,30 +340,30 @@ def activate_closed_chat_room(chat_room_id, client_id):
     The main task of this function is to activate a closed chat room when the client writes to it.
     """
     query = """
-    mutation ActivateClosedChatRoom {
+    mutation ActivateClosedChatRoom {{
         activateClosedChatRoom(
-            input: {
+            input: {{
                 chatRoomId: "{0}",
                 clientId: "{1}"
-            }
-        ) {
-            channel {
+            }}
+        ) {{
+            channel {{
                 channelDescription
                 channelId
                 channelName
                 channelTechnicalId
-                channelType {
+                channelType {{
                     channelTypeDescription
                     channelTypeId
                     channelTypeName
-                }
-            }
+                }}
+            }}
             channelId
             chatRoomId
             chatRoomStatus
             organizationsIds
-            client {
-                country {
+            client {{
+                country {{
                     countryAlpha2Code
                     countryAlpha3Code
                     countryCodeTopLevelDomain
@@ -371,7 +371,7 @@ def activate_closed_chat_room(chat_room_id, client_id):
                     countryNumericCode
                     countryOfficialName
                     countryShortName
-                }
+                }}
                 metadata
                 userFirstName
                 userId
@@ -383,14 +383,14 @@ def activate_closed_chat_room(chat_room_id, client_id):
                 userSecondaryEmail
                 userSecondaryPhoneNumber
                 userType
-                gender {
+                gender {{
                     genderId
                     genderPublicName
                     genderTechnicalName
-                }
-            }
-        }
-    }
+                }}
+            }}
+        }}
+    }}
     """.format(
         chat_room_id,
         client_id
