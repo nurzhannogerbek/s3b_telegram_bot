@@ -323,7 +323,7 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         )
         response.raise_for_status()
     except Exception as error:
-        print("A")
+        print("B")
         logger.error(error)
         sys.exit(1)
 
@@ -413,7 +413,7 @@ def activate_closed_chat_room(chat_room_id, client_id):
         )
         response.raise_for_status()
     except Exception as error:
-        print("A")
+        print("C")
         logger.error(error)
         sys.exit(1)
 
