@@ -161,30 +161,35 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
     """
     # Define the GraphQL mutation query to the AppSync.
     query = """
-    mutation CreateChatRoom {{
+    mutation CreateChatRoom (
+        $channelTechnicalId: String!,
+        $channelTypeName: String!,
+        $clientId: String!,
+        $telegramChatId: String
+    ) {
         createChatRoom(
-            input: {{
-                channelTechnicalId: "{0}",
-                channelTypeName: "{1}",
-                clientId: "{2}",
-                telegramChatId: "{3}"
-            }}
-        ) {{
-            channel {{
+            input: {
+                channelTechnicalId: $channelTechnicalId,
+                channelTypeName: $channelTypeName,
+                clientId: $clientId,
+                telegramChatId: $telegramChatId
+            }
+        ) {
+            channel {
                 channelDescription
                 channelId
                 channelName
                 channelTechnicalId
-                channelType {{
+                channelType {
                     channelTypeDescription
                     channelTypeId
                     channelTypeName
-                }}
-            }}
+                }
+            }
             channelId
             chatRoomId
             chatRoomStatus
-            client {{
+            client {
                 userType
                 userSecondaryPhoneNumber
                 userSecondaryEmail
@@ -196,12 +201,12 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
                 userId
                 userFirstName
                 metadata
-                gender {{
+                gender {
                     genderId
                     genderPublicName
                     genderTechnicalName
-                }}
-                country {{
+                }
+                country {
                     countryAlpha2Code
                     countryAlpha3Code
                     countryCodeTopLevelDomain
@@ -209,17 +214,18 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
                     countryId
                     countryOfficialName
                     countryShortName
-                }}
-            }}
+                }
+            }
             organizationsIds
-        }}
-    }}
-    """.format(
-        channel_technical_id,
-        channel_type_name,
-        client_id,
-        telegram_chat_id
-    )
+        }
+    }
+    """
+    variables = {
+        "channelTechnicalId": channel_technical_id,
+        "channelTypeName": channel_type_name,
+        "clientId": client_id,
+        "telegramChatId": telegram_chat_id
+    }
 
     # Define the header setting.
     headers = {
@@ -232,7 +238,8 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
         response = requests.post(
             APPSYNC_API_URL,
             json={
-                "query": query
+                "query": query,
+                "variables": variables
             },
             headers=headers
         )
@@ -253,7 +260,7 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
     Function description:
     The main task of this function is to create the message in the specific chat room.
     """
-    query = '''
+    query = """
     mutation CreateChatRoomMessage (
         $chatRoomId: String!,
         $messageAuthorId: String!,
@@ -303,7 +310,7 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
             }
         }
     }
-    '''
+    """
     variables = {
         "chatRoomId": chat_room_id,
         "messageAuthorId": message_author_id,
@@ -346,30 +353,33 @@ def activate_closed_chat_room(chat_room_id, client_id):
     The main task of this function is to activate a closed chat room when the client writes to it.
     """
     query = """
-    mutation ActivateClosedChatRoom {{
+    mutation ActivateClosedChatRoom (
+        $chatRoomId: String!,
+        $clientId: String!
+    ) {
         activateClosedChatRoom(
-            input: {{
-                chatRoomId: "{0}",
-                clientId: "{1}"
-            }}
-        ) {{
-            channel {{
+            input: {
+                chatRoomId: $chatRoomId,
+                clientId: $clientId
+            }
+        ) {
+            channel {
                 channelDescription
                 channelId
                 channelName
                 channelTechnicalId
-                channelType {{
+                channelType {
                     channelTypeDescription
                     channelTypeId
                     channelTypeName
-                }}
-            }}
+                }
+            }
             channelId
             chatRoomId
             chatRoomStatus
             organizationsIds
-            client {{
-                country {{
+            client {
+                country {
                     countryAlpha2Code
                     countryAlpha3Code
                     countryCodeTopLevelDomain
@@ -377,7 +387,7 @@ def activate_closed_chat_room(chat_room_id, client_id):
                     countryNumericCode
                     countryOfficialName
                     countryShortName
-                }}
+                }
                 metadata
                 userFirstName
                 userId
@@ -389,18 +399,19 @@ def activate_closed_chat_room(chat_room_id, client_id):
                 userSecondaryEmail
                 userSecondaryPhoneNumber
                 userType
-                gender {{
+                gender {
                     genderId
                     genderPublicName
                     genderTechnicalName
-                }}
-            }}
-        }}
-    }}
-    """.format(
-        chat_room_id,
-        client_id
-    )
+                }
+            }
+        }
+    }
+    """
+    variables = {
+        "chatRoomId": chat_room_id,
+        "clientId": client_id
+    }
 
     # Define the header setting.
     headers = {
@@ -413,7 +424,8 @@ def activate_closed_chat_room(chat_room_id, client_id):
         response = requests.post(
             APPSYNC_API_URL,
             json={
-                "query": query
+                "query": query,
+                "variables": variables
             },
             headers=headers
         )
