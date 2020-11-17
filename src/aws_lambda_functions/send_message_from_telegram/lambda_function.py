@@ -253,12 +253,12 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
     Function description:
     The main task of this function is to create the message in the specific chat room.
     """
-    query = """
+    query = '''
     mutation CreateChatRoomMessage (
-        $chatRoomId: String,
-        $messageAuthorId: String,
-        $messageChannelId: String,
-        $messageType: String,
+        $chatRoomId: String!,
+        $messageAuthorId: String!,
+        $messageChannelId: String!,
+        $messageType: String!,
         $messageText: String
     ) {{
         createChatRoomMessage(
@@ -303,13 +303,7 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
             }}
         }}
     }}
-    """.format(
-        chat_room_id,
-        message_author_id,
-        message_channel_id,
-        message_type,
-        message_text
-    )
+    '''
     variables = {
         "chatRoomId": chat_room_id,
         "messageAuthorId": message_author_id,
