@@ -1,18 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Parameters:
-    CassandraUsername:
-        Type: String
-    CassandraPassword:
-        Type: String
-    CassandraHost:
-        Type: String
-    CassandraPort:
-        Type: String
-    CassandraLocalDC:
-        Type: String
-    CassandraKeyspaceName:
-        Type: String
     PostgreSQLUsername:
         Type: String
     PostgreSQLPassword:
@@ -33,6 +21,10 @@ Parameters:
         Type: String
     StageName:
         Type: String
+    AppsyncApiUrl:
+        Type: String
+    AppsyncApiKey:
+        Type: String
     DatabasesLayerARN:
         Type: String
     UtilsLayerARN:
@@ -46,18 +38,6 @@ Globals:
         Timeout: 900
         Environment:
             Variables:
-                CASSANDRA_USERNAME:
-                    Fn::Sub: "${CassandraUsername}"
-                CASSANDRA_PASSWORD:
-                    Fn::Sub: "${CassandraPassword}"
-                CASSANDRA_HOST:
-                    Fn::Sub: "${CassandraHost}"
-                CASSANDRA_PORT:
-                    Fn::Sub: "${CassandraPort}"
-                CASSANDRA_LOCAL_DC:
-                    Fn::Sub: "${CassandraLocalDC}"
-                CASSANDRA_KEYSPACE_NAME:
-                    Fn::Sub: "${CassandraKeyspaceName}"
                 POSTGRESQL_USERNAME:
                     Fn::Sub: "${PostgreSQLUsername}"
                 POSTGRESQL_PASSWORD:
@@ -70,6 +50,10 @@ Globals:
                     Fn::Sub: "${PostgreSQLDBName}"
                 TELEGRAM_BOT_TOKEN:
                     Fn::Sub: "${TelegramBotToken}"
+                APPSYNC_API_URL:
+                    Fn::Sub: "${AppsyncApiUrl}"
+                APPSYNC_API_KEY:
+                    Fn::Sub: "${AppsyncApiKey}"
 Resources:
     TelegramApiGateway:
         Type: AWS::Serverless::HttpApi

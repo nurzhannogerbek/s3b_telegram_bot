@@ -7,12 +7,6 @@ deploy: &deploy
         - >
           if [ $BITBUCKET_BRANCH == "develop" ];
           then
-            export CASSANDRA_USERNAME=$DEV_CASSANDRA_USERNAME
-            export CASSANDRA_PASSWORD=$DEV_CASSANDRA_PASSWORD
-            export CASSANDRA_HOST=$DEV_CASSANDRA_HOST
-            export CASSANDRA_PORT=$DEV_CASSANDRA_PORT
-            export CASSANDRA_LOCAL_DC=$DEV_CASSANDRA_LOCAL_DC
-            export CASSANDRA_KEYSPACE_NAME=$DEV_CASSANDRA_KEYSPACE_NAME
             export POSTGRESQL_USERNAME=$DEV_POSTGRESQL_USERNAME
             export POSTGRESQL_PASSWORD=$DEV_POSTGRESQL_PASSWORD
             export POSTGRESQL_HOST=$DEV_POSTGRESQL_HOST
@@ -25,6 +19,8 @@ deploy: &deploy
             export ENVIRONMENT_NAME="Dev"
             export AUTH0_DOMAIN=$DEV_AUTH0_DOMAIN
             export AUTH0_AUDIENCE=$DEV_AUTH0_AUDIENCE
+            export APPSYNC_API_URL=$DEV_APPSYNC_API_URL
+            export APPSYNC_API_KEY=$DEV_APPSYNC_API_KEY
             export DATABASES_LAYER_NAME="DevDatabases"
             export UTILS_LAYER_NAME="DevUtils"
             export REQUESTS_LAYER_NAME="DevRequests"
@@ -32,12 +28,6 @@ deploy: &deploy
         - >
           if [ $BITBUCKET_BRANCH == "master" ];
           then
-            export CASSANDRA_USERNAME=$PROD_CASSANDRA_USERNAME
-            export CASSANDRA_PASSWORD=$PROD_CASSANDRA_PASSWORD
-            export CASSANDRA_HOST=$PROD_CASSANDRA_HOST
-            export CASSANDRA_PORT=$PROD_CASSANDRA_PORT
-            export CASSANDRA_LOCAL_DC=$PROD_CASSANDRA_LOCAL_DC
-            export CASSANDRA_KEYSPACE_NAME=$PROD_CASSANDRA_KEYSPACE_NAME
             export POSTGRESQL_USERNAME=$PROD_POSTGRESQL_USERNAME
             export POSTGRESQL_PASSWORD=$PROD_POSTGRESQL_PASSWORD
             export POSTGRESQL_HOST=$PROD_POSTGRESQL_HOST
@@ -50,6 +40,8 @@ deploy: &deploy
             export ENVIRONMENT_NAME="Prod"
             export AUTH0_DOMAIN=$PROD_AUTH0_DOMAIN
             export AUTH0_AUDIENCE=$PROD_AUTH0_AUDIENCE
+            export APPSYNC_API_URL=$PROD_APPSYNC_API_URL
+            export APPSYNC_API_KEY=$PROD_APPSYNC_API_KEY
             export DATABASES_LAYER_NAME="ProdDatabases"
             export UTILS_LAYER_NAME="ProdUtils"
             export REQUESTS_LAYER_NAME="ProdRequests"
@@ -76,30 +68,6 @@ deploy: &deploy
                 {
                   "ParameterKey": "StageName",
                   "ParameterValue": ${STAGE_NAME}
-                },
-                {
-                  "ParameterKey": "CassandraUsername",
-                  "ParameterValue": ${CASSANDRA_USERNAME}
-                },
-                {
-                  "ParameterKey": "CassandraPassword",
-                  "ParameterValue": ${CASSANDRA_PASSWORD}
-                },
-                {
-                  "ParameterKey": "CassandraHost",
-                  "ParameterValue": ${CASSANDRA_HOST}
-                },
-                {
-                  "ParameterKey": "CassandraPort",
-                  "ParameterValue": "9142"
-                },
-                {
-                  "ParameterKey": "CassandraLocalDC",
-                  "ParameterValue": ${CASSANDRA_LOCAL_DC}
-                },
-                {
-                  "ParameterKey": "CassandraKeyspaceName",
-                  "ParameterValue": ${CASSANDRA_KEYSPACE_NAME}
                 },
                 {
                   "ParameterKey": "PostgreSQLUsername",
@@ -136,6 +104,14 @@ deploy: &deploy
                 {
                   "ParameterKey": "Auth0Audience",
                   "ParameterValue": ${AUTH0_AUDIENCE}
+                },
+                {
+                  "ParameterKey": "AppsyncApiUrl",
+                  "ParameterValue": ${APPSYNC_API_URL}
+                },
+                {
+                  "ParameterKey": "AppsyncApiKey",
+                  "ParameterValue": ${APPSYNC_API_KEY}
                 },
                 {
                   "ParameterKey": "DatabasesLayerARN",
