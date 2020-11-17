@@ -7,9 +7,9 @@ import requests
 from psycopg2.extras import RealDictCursor
 
 """
-Define connections to databases outside of the "lambda_handler" function.
-Connections to databases will be created the first time the function is called.
-Any subsequent function call will use the same database connections.
+Define the connection to the database outside of the "lambda_handler" function.
+The connection to the database will be created the first time the function is called.
+Any subsequent function call will use the same database connection.
 """
 postgresql_connection = None
 

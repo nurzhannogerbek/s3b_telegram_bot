@@ -27,8 +27,6 @@ Parameters:
         Type: String
     DatabasesLayerARN:
         Type: String
-    UtilsLayerARN:
-        Type: String
     RequestsLayerARN:
         Type: String
 Globals:
@@ -114,7 +112,6 @@ Resources:
                             Authorizer: Auth0Authorizer
             Layers:
                 - Fn::Sub: "${DatabasesLayerARN}"
-                - Fn::Sub: "${UtilsLayerARN}"
                 - Fn::Sub: "${RequestsLayerARN}"
     SendNotificationToTelegram:
         Type: AWS::Serverless::Function
