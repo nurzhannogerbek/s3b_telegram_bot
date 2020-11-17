@@ -260,25 +260,25 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         $messageChannelId: String!,
         $messageType: String!,
         $messageText: String
-    ) {{
+    ) {
         createChatRoomMessage(
-            input: {{
+            input: {
                 chatRoomId: $chatRoomId,
                 messageAuthorId: $messageAuthorId,
                 messageChannelId: $messageChannelId,
                 messageType: $messageType,
                 messageText: $messageText,
                 messageContentUrl: null,
-                quotedMessage: {{
+                quotedMessage: {
                     messageAuthorId: null,
                     messageChannelId: null,
                     messageContentUrl: null,
                     messageId: null,
                     messageText: null,
                     messageType: null
-                }}
-            }}
-        ) {{
+                }
+            }
+        ) {
             channelId
             chatRoomId
             messageAuthorId
@@ -293,16 +293,16 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
             messageText
             messageType
             messageUpdatedDateTime
-            quotedMessage {{
+            quotedMessage {
                 messageAuthorId
                 messageChannelId
                 messageContentUrl
                 messageId
                 messageText
                 messageType
-            }}
-        }}
-    }}
+            }
+        }
+    }
     '''
     variables = {
         "chatRoomId": chat_room_id,
@@ -324,7 +324,7 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
             APPSYNC_API_URL,
             json={
                 "query": query,
-                "variables": json.dumps(variables)
+                "variables": variables
             },
             headers=headers
         )
