@@ -221,6 +221,8 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
         telegram_chat_id
     )
 
+    print(query)
+
     # Define the header setting.
     headers = {
         "x-api-key": APPSYNC_API_KEY,
