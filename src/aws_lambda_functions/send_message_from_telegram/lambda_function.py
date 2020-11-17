@@ -254,14 +254,20 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
     The main task of this function is to create the message in the specific chat room.
     """
     query = """
-    mutation CreateChatRoomMessage {{
+    mutation CreateChatRoomMessage (
+        $chatRoomId: String,
+        $messageAuthorId: String,
+        $messageChannelId: String,
+        $messageType: String,
+        $messageText: String
+    ) {{
         createChatRoomMessage(
             input: {{
-                chatRoomId: "{0}",
-                messageAuthorId: "{1}",
-                messageChannelId: "{2}",
-                messageType: "{3}",
-                messageText: "{4}",
+                chatRoomId: $chatRoomId,
+                messageAuthorId: $messageAuthorId,
+                messageChannelId: $messageChannelId,
+                messageType: $messageType,
+                messageText: $messageText,
                 messageContentUrl: null,
                 quotedMessage: {{
                     messageAuthorId: null,
@@ -304,6 +310,13 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         message_type,
         message_text
     )
+    variables = {
+        "chatRoomId": chat_room_id,
+        "messageAuthorId": message_author_id,
+        "messageChannelId": message_channel_id,
+        "messageType": message_type,
+        "messageText": message_text
+    }
 
     # Define the header setting.
     headers = {
@@ -316,7 +329,8 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         response = requests.post(
             APPSYNC_API_URL,
             json={
-                "query": query
+                "query": query,
+                "variables": variables
             },
             headers=headers
         )
