@@ -324,7 +324,7 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
             APPSYNC_API_URL,
             json={
                 "query": query,
-                "variables": variables
+                "variables": json.dumps(variables)
             },
             headers=headers
         )
@@ -332,8 +332,6 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
     except Exception as error:
         logger.error(error)
         sys.exit(1)
-
-    print(json.dumps(response.text))
 
     # Return nothing.
     return None
