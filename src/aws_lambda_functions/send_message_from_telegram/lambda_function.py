@@ -339,6 +339,8 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         logger.error(error)
         sys.exit(1)
 
+    print(json.dumps(response.text))
+
     # Return nothing.
     return None
 
