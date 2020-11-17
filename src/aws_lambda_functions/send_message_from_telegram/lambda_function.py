@@ -238,7 +238,6 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
         )
         response.raise_for_status()
     except Exception as error:
-        print("A")
         logger.error(error)
         sys.exit(1)
 
@@ -262,7 +261,7 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
                 messageAuthorId: "{1}",
                 messageChannelId: "{2}",
                 messageType: "{3}",
-                messageText: {4},
+                messageText: "{4}",
                 messageContentUrl: null,
                 quotedMessage: {{
                     messageAuthorId: null,
@@ -323,7 +322,6 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         )
         response.raise_for_status()
     except Exception as error:
-        print("B")
         logger.error(error)
         sys.exit(1)
 
@@ -413,7 +411,6 @@ def activate_closed_chat_room(chat_room_id, client_id):
         )
         response.raise_for_status()
     except Exception as error:
-        print("C")
         logger.error(error)
         sys.exit(1)
 
