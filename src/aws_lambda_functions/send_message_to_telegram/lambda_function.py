@@ -57,7 +57,7 @@ def lambda_handler(event, context):
     message_channel_id = body["arguments"]["input"]["messageChannelId"]
     message_type = body["arguments"]["input"]["messageType"]
     try:
-        message_text = "🙂💬\n{0}".format(body["arguments"]["input"]["messageText"])
+        message_text = body["arguments"]["input"]["messageText"]
     except KeyError:
         message_text = None
     try:
@@ -156,7 +156,7 @@ def send_message_to_telegram(message_text, telegram_chat_id):
     # Send a message to the Telegram chat room.
     request_url = "{0}sendMessage".format(TELEGRAM_API_URL)
     params = {
-        'text': message_text,
+        'text': "🙂💬\n{0}".format(message_text),
         'chat_id': telegram_chat_id
     }
     try:
