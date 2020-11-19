@@ -11,19 +11,19 @@ Parameters:
         Type: String
     PostgreSQLDBName:
         Type: String
+    StageName:
+        Type: String
+    EnvironmentName:
+        Type: String
     Auth0Domain:
         Type: String
     Auth0Audience:
         Type: String
+    AppsyncCoreApiUrl:
+        Type: String
+    AppsyncCoreApiKey:
+        Type: String
     TelegramBotToken:
-        Type: String
-    EnvironmentName:
-        Type: String
-    StageName:
-        Type: String
-    AppsyncApiUrl:
-        Type: String
-    AppsyncApiKey:
         Type: String
     DatabasesLayerARN:
         Type: String
@@ -48,10 +48,10 @@ Globals:
                     Fn::Sub: "${PostgreSQLDBName}"
                 TELEGRAM_BOT_TOKEN:
                     Fn::Sub: "${TelegramBotToken}"
-                APPSYNC_API_URL:
-                    Fn::Sub: "${AppsyncApiUrl}"
-                APPSYNC_API_KEY:
-                    Fn::Sub: "${AppsyncApiKey}"
+                APPSYNC_CORE_API_URL:
+                    Fn::Sub: "${AppsyncCoreApiUrl}"
+                APPSYNC_CORE_API_KEY:
+                    Fn::Sub: "${AppsyncCoreApiKey}"
 Resources:
     TelegramApiGateway:
         Type: AWS::Serverless::HttpApi

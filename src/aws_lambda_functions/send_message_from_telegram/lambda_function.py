@@ -21,8 +21,8 @@ POSTGRESQL_PORT = int(os.environ["POSTGRESQL_PORT"])
 POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_API_URL = "https://api.telegram.org/bot{0}/".format(TELEGRAM_BOT_TOKEN)
-APPSYNC_API_URL = os.environ["APPSYNC_API_URL"]
-APPSYNC_API_KEY = os.environ["APPSYNC_API_KEY"]
+APPSYNC_CORE_API_URL = os.environ["APPSYNC_CORE_API_URL"]
+APPSYNC_CORE_API_KEY = os.environ["APPSYNC_CORE_API_KEY"]
 
 logger = logging.getLogger(__name__)  # Create the logger with the specified name.
 logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
@@ -47,8 +47,8 @@ def lambda_handler(event, context):
         if message_text is not None:
             # Define client information.
             metadata = message["from"]
-            first_name = metadata["first_name"]
-            last_name = metadata["first_name"]
+            first_name = metadata.get("first_name", None)
+            last_name = metadata.get("last_name", None)
             telegram_username = metadata["username"]
             is_bot = metadata["is_bot"]
 
@@ -229,14 +229,14 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
 
     # Define the header setting.
     headers = {
-        "x-api-key": APPSYNC_API_KEY,
+        "x-api-key": APPSYNC_CORE_API_KEY,
         "Content-Type": "application/json"
     }
 
     try:
         # Make the POST request to the AppSync.
         response = requests.post(
-            APPSYNC_API_URL,
+            APPSYNC_CORE_API_URL,
             json={
                 "query": query,
                 "variables": variables
@@ -321,14 +321,14 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
 
     # Define the header setting.
     headers = {
-        "x-api-key": APPSYNC_API_KEY,
+        "x-api-key": APPSYNC_CORE_API_KEY,
         "Content-Type": "application/json"
     }
 
     try:
         # Make the POST request to the AppSync.
         response = requests.post(
-            APPSYNC_API_URL,
+            APPSYNC_CORE_API_URL,
             json={
                 "query": query,
                 "variables": variables
@@ -415,14 +415,14 @@ def activate_closed_chat_room(chat_room_id, client_id):
 
     # Define the header setting.
     headers = {
-        "x-api-key": APPSYNC_API_KEY,
+        "x-api-key": APPSYNC_CORE_API_KEY,
         "Content-Type": "application/json"
     }
 
     try:
         # Make the POST request to the AppSync.
         response = requests.post(
-            APPSYNC_API_URL,
+            APPSYNC_CORE_API_URL,
             json={
                 "query": query,
                 "variables": variables
@@ -520,8 +520,8 @@ def create_identified_user(postgresql_db_connection, first_name, last_name, meta
         metadata,
         telegram_username
     ) values(
-        '{0}',
-        '{1}',
+        {0},
+        {1},
         '{2}',
         '{3}'
     )
@@ -530,8 +530,8 @@ def create_identified_user(postgresql_db_connection, first_name, last_name, meta
     returning
         identified_user_id;
     """.format(
-        first_name,
-        last_name,
+        'null' if first_name is None or len(first_name) == 0 else "'{0}'".format(first_name),
+        'null' if last_name is None or len(last_name) == 0 else "'{0}'".format(last_name),
         json.dumps(metadata),
         telegram_username
     )
