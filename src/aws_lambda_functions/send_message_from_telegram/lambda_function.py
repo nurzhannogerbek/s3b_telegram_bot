@@ -105,8 +105,8 @@ def lambda_handler(event, context):
                         chat_room_entry = create_chat_room(TELEGRAM_BOT_TOKEN, "telegram", client_id, telegram_chat_id)
 
                         # Define several variables that will be used in the future.
-                        chat_room_id = chat_room_entry.get("chatRoomId", None)
-                        channel_id = chat_room_entry.get("channelId", None)
+                        chat_room_id = chat_room_entry["data"]["createChatRoom"]["chatRoomId"]
+                        channel_id = chat_room_entry["data"]["createChatRoom"]["channelId"]
                     elif chat_room_status == "completed":
                         activate_closed_chat_room(chat_room_id, client_id)
 
