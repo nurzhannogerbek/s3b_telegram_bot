@@ -22,8 +22,8 @@ POSTGRESQL_PORT = int(os.environ["POSTGRESQL_PORT"])
 POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_API_URL = "https://api.telegram.org/bot{0}/".format(TELEGRAM_BOT_TOKEN)
-APPSYNC_API_URL = os.environ["APPSYNC_API_URL"]
-APPSYNC_API_KEY = os.environ["APPSYNC_API_KEY"]
+APPSYNC_CORE_API_URL = os.environ["APPSYNC_CORE_API_URL"]
+APPSYNC_CORE_API_KEY = os.environ["APPSYNC_CORE_API_KEY"]
 
 logger = logging.getLogger(__name__)  # Create the logger with the specified name.
 logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
@@ -239,14 +239,14 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
 
     # Define the header setting.
     headers = {
-        "x-api-key": APPSYNC_API_KEY,
+        "x-api-key": APPSYNC_CORE_API_KEY,
         "Content-Type": "application/json"
     }
 
     try:
         # Make the POST request to the AppSync.
         response = requests.post(
-            APPSYNC_API_URL,
+            APPSYNC_CORE_API_URL,
             json={
                 "query": query,
                 "variables": variables
