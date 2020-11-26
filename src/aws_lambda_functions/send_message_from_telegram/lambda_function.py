@@ -49,7 +49,10 @@ def lambda_handler(event, context):
             metadata = message["from"]
             first_name = metadata.get("first_name", None)
             last_name = metadata.get("last_name", None)
-            telegram_username = metadata["username"]
+            try:
+                telegram_username = metadata["username"]
+            except KeyError:
+                telegram_username = None
             is_bot = metadata["is_bot"]
 
             # Check whether a person or bot writes to us.
@@ -523,7 +526,7 @@ def create_identified_user(postgresql_db_connection, first_name, last_name, meta
         {0},
         {1},
         '{2}',
-        '{3}'
+        {3}
     )
     on conflict on constraint identified_users_telegram_username_key 
     do nothing
@@ -533,7 +536,7 @@ def create_identified_user(postgresql_db_connection, first_name, last_name, meta
         'null' if first_name is None or len(first_name) == 0 else "'{0}'".format(first_name),
         'null' if last_name is None or len(last_name) == 0 else "'{0}'".format(last_name),
         json.dumps(metadata),
-        telegram_username
+        'null' if telegram_username is None or len(telegram_username) == 0 else "'{0}'".format(telegram_username),
     )
 
     # Execute a previously prepared SQL query.
