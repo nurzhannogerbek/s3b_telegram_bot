@@ -20,8 +20,7 @@ POSTGRESQL_PASSWORD = os.environ["POSTGRESQL_PASSWORD"]
 POSTGRESQL_HOST = os.environ["POSTGRESQL_HOST"]
 POSTGRESQL_PORT = int(os.environ["POSTGRESQL_PORT"])
 POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
-TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-TELEGRAM_API_URL = "https://api.telegram.org/bot{0}/".format(TELEGRAM_BOT_TOKEN)
+TELEGRAM_API_URL = "https://api.telegram.org"
 APPSYNC_CORE_API_URL = os.environ["APPSYNC_CORE_API_URL"]
 APPSYNC_CORE_API_KEY = os.environ["APPSYNC_CORE_API_KEY"]
 
@@ -34,20 +33,6 @@ def lambda_handler(event, context):
     :argument event: The AWS Lambda uses this parameter to pass in event data to the handler.
     :argument context: The AWS Lambda uses this parameter to provide runtime information to your handler.
     """
-    global postgresql_connection
-    if not postgresql_connection:
-        try:
-            postgresql_connection = databases.create_postgresql_connection(
-                POSTGRESQL_USERNAME,
-                POSTGRESQL_PASSWORD,
-                POSTGRESQL_HOST,
-                POSTGRESQL_PORT,
-                POSTGRESQL_DB_NAME
-            )
-        except Exception as error:
-            logger.error(error)
-            sys.exit(1)
-
     # Parse the JSON object.
     body = json.loads(event['body'])
 
@@ -89,17 +74,34 @@ def lambda_handler(event, context):
     except KeyError:
         quoted_message_content_url = None
 
+    global postgresql_connection
+    if not postgresql_connection:
+        try:
+            postgresql_connection = databases.create_postgresql_connection(
+                POSTGRESQL_USERNAME,
+                POSTGRESQL_PASSWORD,
+                POSTGRESQL_HOST,
+                POSTGRESQL_PORT,
+                POSTGRESQL_DB_NAME
+            )
+        except Exception as error:
+            logger.error(error)
+            sys.exit(1)
+
     # With a dictionary cursor, the data is sent in a form of Python dictionaries.
     cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
 
     # Prepare the SQL request that gives the minimal information about the specific chat room.
     statement = """
     select
-        telegram_chat_rooms.telegram_chat_id
+        telegram_chat_rooms.telegram_chat_id,
+        channels.channel_technical_id as telegram_bot_token
     from
         chat_rooms
     left join telegram_chat_rooms on
         chat_rooms.chat_room_id = telegram_chat_rooms.chat_room_id
+    left join channels on
+        chat_rooms.channel_id = channels.channel_id
     where
         chat_rooms.chat_room_id = '{0}'
     limit 1;
@@ -115,13 +117,10 @@ def lambda_handler(event, context):
     # After the successful execution of the query commit your changes to the database.
     postgresql_connection.commit()
 
-    # Define several necessary variables.
-    # Execute a previously prepared SQL query.
-    try:
-        telegram_chat_id = cursor.fetchone()["telegram_chat_id"]
-    except Exception as error:
-        logger.error(error)
-        sys.exit(1)
+    # Fetch the next row of a query result set.
+    aggregated_data = cursor.fetchone()
+    telegram_chat_id = aggregated_data["telegram_chat_id"]
+    telegram_bot_token = aggregated_data["telegram_bot_token"]
 
     # The cursor will be unusable from this point forward.
     cursor.close()
@@ -136,7 +135,7 @@ def lambda_handler(event, context):
     )
 
     # Send a message to the Telegram chat room.
-    send_message_to_telegram(message_text, telegram_chat_id)
+    send_message_to_telegram(telegram_bot_token, message_text, telegram_chat_id)
 
     # Return the object with information about created chat room message.
     return {
@@ -145,7 +144,7 @@ def lambda_handler(event, context):
     }
 
 
-def send_message_to_telegram(message_text, telegram_chat_id):
+def send_message_to_telegram(telegram_bot_token, message_text, telegram_chat_id):
     """
     Function name:
     send_message_to_telegram
@@ -154,7 +153,7 @@ def send_message_to_telegram(message_text, telegram_chat_id):
     The main task of this function is to send the specific message to the Telegram.
     """
     # Send a message to the Telegram chat room.
-    request_url = "{0}sendMessage".format(TELEGRAM_API_URL)
+    request_url = "{0}/bot{1}/sendMessage".format(TELEGRAM_API_URL, telegram_bot_token)
     params = {
         'text': "🙂💬\n{0}".format(message_text),
         'chat_id': telegram_chat_id

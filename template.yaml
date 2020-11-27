@@ -23,8 +23,6 @@ Parameters:
         Type: String
     AppsyncCoreApiKey:
         Type: String
-    TelegramBotToken:
-        Type: String
     DatabasesLayerARN:
         Type: String
     RequestsLayerARN:
@@ -46,8 +44,6 @@ Globals:
                     Fn::Sub: "${PostgreSQLPort}"
                 POSTGRESQL_DB_NAME:
                     Fn::Sub: "${PostgreSQLDBName}"
-                TELEGRAM_BOT_TOKEN:
-                    Fn::Sub: "${TelegramBotToken}"
                 APPSYNC_CORE_API_URL:
                     Fn::Sub: "${AppsyncCoreApiUrl}"
                 APPSYNC_CORE_API_KEY:
@@ -88,7 +84,7 @@ Resources:
                     Properties:
                         ApiId:
                             Ref: TelegramApiGateway
-                        Path: /send_message_from_telegram
+                        Path: /send_message_from_telegram/{business_account}
                         Method: POST
             Layers:
                 - Fn::Sub: "${DatabasesLayerARN}"

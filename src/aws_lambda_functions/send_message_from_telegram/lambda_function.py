@@ -19,8 +19,7 @@ POSTGRESQL_PASSWORD = os.environ["POSTGRESQL_PASSWORD"]
 POSTGRESQL_HOST = os.environ["POSTGRESQL_HOST"]
 POSTGRESQL_PORT = int(os.environ["POSTGRESQL_PORT"])
 POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
-TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-TELEGRAM_API_URL = "https://api.telegram.org/bot{0}/".format(TELEGRAM_BOT_TOKEN)
+TELEGRAM_API_URL = "https://api.telegram.org"
 APPSYNC_CORE_API_URL = os.environ["APPSYNC_CORE_API_URL"]
 APPSYNC_CORE_API_KEY = os.environ["APPSYNC_CORE_API_KEY"]
 
@@ -42,6 +41,26 @@ def lambda_handler(event, context):
         # Define the id of the telegram chat and message text which the client sent.
         telegram_chat_id = message["chat"]["id"]
         message_text = message.get("text", None)
+
+        # Determine the business account from which clients write.
+        business_account = event['rawPath'].rsplit('/', 1)[1]
+
+        global postgresql_connection
+        if not postgresql_connection:
+            try:
+                postgresql_connection = databases.create_postgresql_connection(
+                    POSTGRESQL_USERNAME,
+                    POSTGRESQL_PASSWORD,
+                    POSTGRESQL_HOST,
+                    POSTGRESQL_PORT,
+                    POSTGRESQL_DB_NAME
+                )
+            except Exception as error:
+                logger.error(error)
+                sys.exit(1)
+
+        # Get telegram bot token from the database.
+        telegram_bot_token = get_telegram_bot_token(postgresql_connection, business_account)
 
         # Check if message text is available.
         if message_text is not None:
@@ -65,22 +84,8 @@ def lambda_handler(event, context):
                         if first_name is None
                         else ", {0}".format(first_name)
                     )
-                    send_message_to_telegram(message_text, telegram_chat_id)
+                    send_message_to_telegram(telegram_bot_token, message_text, telegram_chat_id)
                 else:
-                    global postgresql_connection
-                    if not postgresql_connection:
-                        try:
-                            postgresql_connection = databases.create_postgresql_connection(
-                                POSTGRESQL_USERNAME,
-                                POSTGRESQL_PASSWORD,
-                                POSTGRESQL_HOST,
-                                POSTGRESQL_PORT,
-                                POSTGRESQL_DB_NAME
-                            )
-                        except Exception as error:
-                            logger.error(error)
-                            sys.exit(1)
-
                     # Get aggregated data from the database associated with the specific chat room.
                     aggregated_data = get_chat_room_information(postgresql_connection, telegram_chat_id)
 
@@ -105,7 +110,7 @@ def lambda_handler(event, context):
                         )
 
                         # Call a mutation called "createChatRoom" from AppSync.
-                        chat_room_entry = create_chat_room(TELEGRAM_BOT_TOKEN, "telegram", client_id, telegram_chat_id)
+                        chat_room_entry = create_chat_room(telegram_bot_token, "telegram", client_id, telegram_chat_id)
 
                         # Define several variables that will be used in the future.
                         chat_room_id = chat_room_entry["data"]["createChatRoom"]["chatRoomId"]
@@ -117,11 +122,11 @@ def lambda_handler(event, context):
                     create_chat_room_message(chat_room_id, client_id, channel_id, "text", message_text)
             else:
                 text = "🤖💬\nHello my brother from another mother!"
-                send_message_to_telegram(text, telegram_chat_id)
+                send_message_to_telegram(telegram_bot_token, text, telegram_chat_id)
         else:
             message_text = """🤖💬\nОбработка данного формата сообщения в данный момент невозможна.\nПросим прощения 
             за доставленные временные неудобства!"""
-            send_message_to_telegram(message_text, telegram_chat_id)
+            send_message_to_telegram(telegram_bot_token, message_text, telegram_chat_id)
 
     # Return the status code value of the request.
     return {
@@ -129,7 +134,48 @@ def lambda_handler(event, context):
     }
 
 
-def send_message_to_telegram(message_text, telegram_chat_id):
+def get_telegram_bot_token(postgresql_db_connection, business_account):
+    """
+    Function name:
+    get_telegram_bot_token
+
+    Function description:
+    The main task of this function is to get the value of the chat bot token.
+    """
+    # With a dictionary cursor, the data is sent in a form of Python dictionaries.
+    cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
+
+    # Prepare the SQL request that creates the new identified user.
+    statement = """
+    select
+        channels.channel_technical_id as telegram_bot_token
+    from
+        telegram_business_accounts
+    left join channels on
+        telegram_business_accounts.channel_id = channels.channel_id
+    where
+        telegram_business_accounts.business_account = '{0}'
+    limit 1;
+    """.format(business_account)
+
+    # Execute a previously prepared SQL query.
+    try:
+        cursor.execute(statement)
+    except Exception as error:
+        logger.error(error)
+        sys.exit(1)
+
+    # After the successful execution of the query commit your changes to the database.
+    postgresql_db_connection.commit()
+
+    # Define the id of the created identified user.
+    telegram_bot_token = cursor.fetchone()["telegram_bot_token"]
+
+    # Return chat bot token.
+    return telegram_bot_token
+
+
+def send_message_to_telegram(telegram_bot_token, message_text, telegram_chat_id):
     """
     Function name:
     send_message_to_telegram
@@ -138,7 +184,7 @@ def send_message_to_telegram(message_text, telegram_chat_id):
     The main task of this function is to send the specific message to the Telegram.
     """
     # Send a message to the Telegram chat room.
-    request_url = "{0}sendMessage".format(TELEGRAM_API_URL)
+    request_url = "{0}/bot{1}/sendMessage".format(TELEGRAM_API_URL, telegram_bot_token)
     params = {
         'text': message_text,
         'chat_id': telegram_chat_id

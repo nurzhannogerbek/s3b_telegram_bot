@@ -12,7 +12,6 @@ deploy: &deploy
             export POSTGRESQL_HOST=$DEV_POSTGRESQL_HOST
             export POSTGRESQL_PORT=$DEV_POSTGRESQL_PORT
             export POSTGRESQL_DB_NAME=$DEV_POSTGRESQL_DB_NAME
-            export TELEGRAM_BOT_TOKEN=$DEV_TELEGRAM_BOT_TOKEN
             export S3_BUCKET="dev-3beep-telegram-bot"
             export STACK_NAME="Dev3beepTelegramBot"
             export STAGE_NAME="dev"
@@ -32,7 +31,6 @@ deploy: &deploy
             export POSTGRESQL_HOST=$PROD_POSTGRESQL_HOST
             export POSTGRESQL_PORT=$PROD_POSTGRESQL_PORT
             export POSTGRESQL_DB_NAME=$PROD_POSTGRESQL_DB_NAME
-            export TELEGRAM_BOT_TOKEN=$PROD_TELEGRAM_BOT_TOKEN
             export S3_BUCKET="prod-3beep-telegram-bot"
             export STACK_NAME="Prod3beepTelegramBot"
             export STAGE_NAME="prod"
@@ -105,10 +103,6 @@ deploy: &deploy
                 {
                   "ParameterKey": "AppsyncCoreApiKey",
                   "ParameterValue": ${APPSYNC_CORE_API_KEY}
-                },
-                {
-                  "ParameterKey": "TelegramBotToken",
-                  "ParameterValue": ${TELEGRAM_BOT_TOKEN}
                 },
                 {
                   "ParameterKey": "DatabasesLayerARN",
