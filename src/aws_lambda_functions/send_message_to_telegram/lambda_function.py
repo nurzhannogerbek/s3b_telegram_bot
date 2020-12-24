@@ -451,8 +451,6 @@ def lambda_handler(event, context):
     # Define the input arguments of the AWS Lambda function.
     input_arguments = results_of_tasks["input_arguments"]
     chat_room_id = input_arguments.get("chat_room_id", None)
-    client_id = input_arguments.get("message_author_id", None)
-    channel_id = input_arguments.get("message_channel_id", None)
     message_text = input_arguments.get("message_text", None)
 
     # Get the aggregated data.
@@ -476,13 +474,7 @@ def lambda_handler(event, context):
         raise Exception(error)
 
     # Send the message to the operator and save it in the database.
-    create_chat_room_message(
-        chat_room_id=chat_room_id,
-        message_author_id=client_id,
-        message_channel_id=channel_id,
-        message_type="text",
-        message_text=message_text
-    )
+    create_chat_room_message(input_arguments=input_arguments)
 
     # Define the variable which stores information about the message of the chat room.
     chat_room_message = results_of_tasks["chat_room_message"]
