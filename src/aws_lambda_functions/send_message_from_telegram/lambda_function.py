@@ -274,7 +274,7 @@ def create_chat_room(**kwargs) -> None:
         createChatRoom(
             input: {
                 channelTechnicalId: $channelTechnicalId,
-                channelTypeName: telegram,
+                channelTypeName: "telegram",
                 clientId: $clientId,
                 lastMessageContent: $lastMessageContent,
                 telegramChatId: $telegramChatId
