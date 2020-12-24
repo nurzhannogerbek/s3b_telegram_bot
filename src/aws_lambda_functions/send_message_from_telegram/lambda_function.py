@@ -771,7 +771,7 @@ def lambda_handler(event, context):
     if message:
         # Define the telegram chat id and message text which the client sent.
         try:
-            telegram_chat_id = message["chat"]["id"]
+            telegram_chat_id = str(message["chat"]["id"])
         except Exception as error:
             logger.error(error)
             raise Exception(error)
