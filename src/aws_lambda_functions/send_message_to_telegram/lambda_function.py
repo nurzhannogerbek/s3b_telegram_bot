@@ -256,7 +256,7 @@ def get_aggregated_data(**kwargs) -> Dict:
     return cursor.fetchone()
 
 
-def create_chat_room_message(**kwargs) -> None:
+def create_chat_room_message(**kwargs) -> Dict:
     # Check if the input dictionary has all the necessary keys.
     try:
         input_arguments = kwargs["input_arguments"]
