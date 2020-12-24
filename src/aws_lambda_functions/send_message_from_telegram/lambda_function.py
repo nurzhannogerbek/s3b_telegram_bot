@@ -274,7 +274,7 @@ def create_chat_room(**kwargs) -> None:
         createChatRoom(
             input: {
                 channelTechnicalId: $channelTechnicalId,
-                channelTypeName: "telegram",
+                channelTypeName: telegram,
                 clientId: $clientId,
                 lastMessageContent: $lastMessageContent,
                 telegramChatId: $telegramChatId
@@ -690,7 +690,7 @@ def update_message_data(**kwargs):
             input: {
                 chatRoomId: $chatRoomId,
                 isClient: true,
-                messageStatus: "MESSAGE_IS_SENT",
+                messageStatus: MESSAGE_IS_SENT,
                 messagesIds: $messagesIds
             }
         ) {
