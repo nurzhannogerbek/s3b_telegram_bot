@@ -273,6 +273,7 @@ def create_chat_room_message(**kwargs) -> Dict[AnyStr, Any]:
     quoted_message_author_id = input_arguments.get("quoted_message_author_id", None)
     quoted_message_channel_id = input_arguments.get("quoted_message_channel_id", None)
     quoted_message_text = input_arguments.get("quoted_message_text", None)
+    quoted_message_type = input_arguments.get("quoted_message_type", None)
     quoted_message_content_url = input_arguments.get("quoted_message_content_url", None)
     local_message_id = input_arguments.get("local_message_id", None)
 
@@ -289,6 +290,7 @@ def create_chat_room_message(**kwargs) -> Dict[AnyStr, Any]:
         $quotedMessageAuthorId: String,
         $quotedMessageChannelId: String,
         $quotedMessageText: String,
+        $quotedMessageType: String,
         $quotedMessageContentUrl: String,
         $localMessageId: String
     ) {
@@ -300,7 +302,7 @@ def create_chat_room_message(**kwargs) -> Dict[AnyStr, Any]:
                 messageChannelId: $messageChannelId,
                 messageContentUrl: $messageContentUrl,
                 messageText: $messageText,
-                messageType: messageType,
+                messageType: $messageType,
                 quotedMessage: {
                     messageAuthorId: $quotedMessageAuthorId,
                     messageChannelId: $quotedMessageChannelId,
@@ -351,6 +353,7 @@ def create_chat_room_message(**kwargs) -> Dict[AnyStr, Any]:
         "quotedMessageAuthorId": quoted_message_author_id,
         "quotedMessageChannelId": quoted_message_channel_id,
         "quotedMessageText": quoted_message_text,
+        "$quotedMessageType": quoted_message_type,
         "quotedMessageContentUrl": quoted_message_content_url,
         "localMessageId": local_message_id
     }
