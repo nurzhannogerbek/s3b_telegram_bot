@@ -1,19 +1,20 @@
-import databases
 import logging
-import sys
 import os
-import json
-import requests
+from psycopg2 import connect
 from psycopg2.extras import RealDictCursor
+from functools import wraps
+from typing import *
+import json
+from threading import Thread
+from queue import Queue
+import requests
+import databases
 
-"""
-Define the connection to the database outside of the "lambda_handler" function.
-The connection to the database will be created the first time the function is called.
-Any subsequent function call will use the same database connection.
-"""
-postgresql_connection = None
+# Configure the logging tool in the AWS Lambda function.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
 
-# Define global variables.
+# Initialize constants with parameters to configure.
 POSTGRESQL_USERNAME = os.environ["POSTGRESQL_USERNAME"]
 POSTGRESQL_PASSWORD = os.environ["POSTGRESQL_PASSWORD"]
 POSTGRESQL_HOST = os.environ["POSTGRESQL_HOST"]
@@ -23,130 +24,105 @@ TELEGRAM_API_URL = "https://api.telegram.org"
 APPSYNC_CORE_API_URL = os.environ["APPSYNC_CORE_API_URL"]
 APPSYNC_CORE_API_KEY = os.environ["APPSYNC_CORE_API_KEY"]
 
-logger = logging.getLogger(__name__)  # Create the logger with the specified name.
-logger.setLevel(logging.WARNING)  # Set the logging level of the logger.
+# The connection to the database will be created the first time the AWS Lambda function is called.
+# Any subsequent call to the function will use the same database connection until the container stops.
+POSTGRESQL_CONNECTION = None
 
 
-def lambda_handler(event, context):
-    """
-    :argument event: The AWS Lambda uses this parameter to pass in event data to the handler.
-    :argument context: The AWS Lambda uses this parameter to provide runtime information to your handler.
-    """
-    # Parse the JSON object.
-    body = json.loads(event['body'])
-    message = body.get("message", None)
+def run_multithreading_tasks(functions: List[Dict[AnyStr, Union[Callable, Dict[AnyStr, Any]]]]) -> Dict[AnyStr, Any]:
+    # Create the empty list to save all parallel threads.
+    threads = []
 
-    # Check if the "message" key is available in the JSON object.
-    if message is not None:
-        # Define the id of the telegram chat and message text which the client sent.
-        telegram_chat_id = message["chat"]["id"]
-        message_text = message.get("text", None)
+    # Create the queue to store all results of functions.
+    queue = Queue()
 
-        # Determine the business account from which clients write.
-        business_account = event['rawPath'].rsplit('/', 1)[1]
+    # Create the thread for each function.
+    for function in functions:
+        # Check whether the input arguments have keys in their dictionaries.
+        try:
+            function_object = function["function_object"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
+        try:
+            function_arguments = function["function_arguments"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
 
-        global postgresql_connection
-        if not postgresql_connection:
-            try:
-                postgresql_connection = databases.create_postgresql_connection(
-                    POSTGRESQL_USERNAME,
-                    POSTGRESQL_PASSWORD,
-                    POSTGRESQL_HOST,
-                    POSTGRESQL_PORT,
-                    POSTGRESQL_DB_NAME
-                )
-            except Exception as error:
-                logger.error(error)
-                sys.exit(1)
+        # Add the instance of the queue to the list of function arguments.
+        function_arguments["queue"] = queue
 
-        # Get telegram bot token from the database.
-        telegram_bot_token = get_telegram_bot_token(postgresql_connection, business_account)
+        # Create the thread.
+        thread = Thread(target=function_object, kwargs=function_arguments)
+        threads.append(thread)
 
-        # Check if message text is available.
-        if message_text is not None:
-            # Define client information.
-            metadata = message["from"]
-            first_name = metadata.get("first_name", None)
-            last_name = metadata.get("last_name", None)
-            try:
-                telegram_username = metadata["username"]
-            except KeyError:
-                telegram_username = None
-            is_bot = metadata["is_bot"]
+    # Start all parallel threads.
+    for thread in threads:
+        thread.start()
 
-            # Check whether a person or bot writes to us.
-            if is_bot is False:
-                # Check the value of the message text which was sent.
-                if message_text == "/start":
-                    # Create a welcome message to the client who wrote to the chat bot for the first time.
-                    message_text = """🤖💬\nЗдравствуйте{0}!\nЧем мы можем Вам помочь?""".format(
-                        str()
-                        if first_name is None
-                        else ", {0}".format(first_name)
-                    )
-                    send_message_to_telegram(telegram_bot_token, message_text, telegram_chat_id)
-                else:
-                    # Get aggregated data from the database associated with the specific chat room.
-                    aggregated_data = get_chat_room_information(postgresql_connection, telegram_chat_id)
+    # Wait until all parallel threads are finished.
+    for thread in threads:
+        thread.join()
 
-                    # Define several variables that will be used in the future.
-                    if aggregated_data is not None:
-                        chat_room_id = aggregated_data["chat_room_id"]
-                        channel_id = aggregated_data["channel_id"]
-                        chat_room_status = aggregated_data["chat_room_status"]
-                        client_id = aggregated_data["client_id"]
-                    else:
-                        chat_room_id, channel_id, chat_room_status, client_id = None, None, None, None
+    # Get the results of all threads.
+    results = {}
+    while not queue.empty():
+        results = {**results, **queue.get()}
 
-                    # Check the status of the chat room.
-                    if chat_room_status is None:
-                        # Create new identified user in the PostgreSQL database.
-                        client_id = create_identified_user(
-                            postgresql_connection,
-                            first_name,
-                            last_name,
-                            metadata,
-                            telegram_username
-                        )
-
-                        # Call a mutation called "createChatRoom" from AppSync.
-                        chat_room_entry = create_chat_room(telegram_bot_token, "telegram", client_id, telegram_chat_id)
-
-                        # Define several variables that will be used in the future.
-                        chat_room_id = chat_room_entry["data"]["createChatRoom"]["chatRoomId"]
-                        channel_id = chat_room_entry["data"]["createChatRoom"]["channelId"]
-                    elif chat_room_status == "completed":
-                        activate_closed_chat_room(chat_room_id, client_id)
-
-                    # Add a new message from the client to the database.
-                    create_chat_room_message(chat_room_id, client_id, channel_id, "text", message_text)
-            else:
-                text = "🤖💬\nHello my brother from another mother!"
-                send_message_to_telegram(telegram_bot_token, text, telegram_chat_id)
-        else:
-            message_text = """🤖💬\nОбработка данного формата сообщения в данный момент невозможна.\nПросим прощения 
-            за доставленные временные неудобства!"""
-            send_message_to_telegram(telegram_bot_token, message_text, telegram_chat_id)
-
-    # Return the status code value of the request.
-    return {
-        "statusCode": 200
-    }
+    # Return the results of all threads.
+    return results
 
 
-def get_telegram_bot_token(postgresql_db_connection, business_account):
-    """
-    Function name:
-    get_telegram_bot_token
+def reuse_or_recreate_postgresql_connection() -> connect:
+    global POSTGRESQL_CONNECTION
+    if not POSTGRESQL_CONNECTION:
+        try:
+            POSTGRESQL_CONNECTION = databases.create_postgresql_connection(
+                POSTGRESQL_USERNAME,
+                POSTGRESQL_PASSWORD,
+                POSTGRESQL_HOST,
+                POSTGRESQL_PORT,
+                POSTGRESQL_DB_NAME
+            )
+        except Exception as error:
+            logger.error(error)
+            raise Exception("Unable to connect to the PostgreSQL database.")
+    return POSTGRESQL_CONNECTION
 
-    Function description:
-    The main task of this function is to get the value of the chat bot token.
-    """
-    # With a dictionary cursor, the data is sent in a form of Python dictionaries.
-    cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
 
-    # Prepare the SQL request that creates the new identified user.
-    statement = """
+def postgresql_wrapper(function):
+    @wraps(function)
+    def wrapper(**kwargs):
+        try:
+            postgresql_connection = kwargs["postgresql_connection"]
+        except KeyError as error:
+            logger.error(error)
+            raise Exception(error)
+        cursor = postgresql_connection.cursor(cursor_factory=RealDictCursor)
+        kwargs["cursor"] = cursor
+        result = function(**kwargs)
+        cursor.close()
+        return result
+    return wrapper
+
+
+@postgresql_wrapper
+def get_telegram_bot_token(**kwargs) -> AnyStr:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        cursor = kwargs["cursor"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        sql_arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Prepare the SQL query that returns the telegram's chat bot token.
+    sql_statement = """
     select
         channels.channel_technical_id as telegram_bot_token
     from
@@ -154,73 +130,153 @@ def get_telegram_bot_token(postgresql_db_connection, business_account):
     left join channels on
         telegram_business_accounts.channel_id = channels.channel_id
     where
-        telegram_business_accounts.business_account = '{0}'
+        telegram_business_accounts.business_account = %(business_account)s
     limit 1;
-    """.format(business_account)
+    """
 
-    # Execute a previously prepared SQL query.
+    # Execute the SQL query dynamically, in a convenient and safe way.
     try:
-        cursor.execute(statement)
+        cursor.execute(sql_statement, sql_arguments)
     except Exception as error:
         logger.error(error)
-        sys.exit(1)
+        raise Exception(error)
 
-    # After the successful execution of the query commit your changes to the database.
-    postgresql_db_connection.commit()
-
-    # Define the id of the created identified user.
-    telegram_bot_token = cursor.fetchone()["telegram_bot_token"]
-
-    # Return chat bot token.
-    return telegram_bot_token
+    # Return telegram's chat bot token.
+    return cursor.fetchone()["telegram_bot_token"]
 
 
-def send_message_to_telegram(telegram_bot_token, message_text, telegram_chat_id):
-    """
-    Function name:
-    send_message_to_telegram
-
-    Function description:
-    The main task of this function is to send the specific message to the Telegram.
-    """
-    # Send a message to the Telegram chat room.
-    request_url = "{0}/bot{1}/sendMessage".format(TELEGRAM_API_URL, telegram_bot_token)
-    params = {
-        'text': message_text,
-        'chat_id': telegram_chat_id
-    }
+def send_message_to_telegram(**kwargs) -> None:
+    # Check if the input dictionary has all the necessary keys.
     try:
-        response = requests.get(request_url, params=params)
+        telegram_bot_token = kwargs["telegram_bot_token"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        message_text = kwargs["message_text"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        telegram_chat_id = kwargs["telegram_chat_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Create the request URL address.
+    request_url = "{0}/bot{1}/sendMessage".format(TELEGRAM_API_URL, telegram_bot_token)
+
+    # Create the parameters.
+    parameters = {
+        "text": message_text,
+        "chat_id": telegram_chat_id
+    }
+
+    # Execute GET request.
+    try:
+        response = requests.get(request_url, params=parameters)
         response.raise_for_status()
     except Exception as error:
         logger.error(error)
-        sys.exit(1)
+        raise Exception(error)
 
     # Return nothing.
     return None
 
 
-def create_chat_room(channel_technical_id, channel_type_name, client_id, telegram_chat_id):
-    """
-    Function name:
-    create_chat_room
+@postgresql_wrapper
+def get_aggregated_data(**kwargs) -> Dict:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        cursor = kwargs["cursor"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        sql_arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
-    Function description:
-    The main task of this function is to create a chat room.
+    # Prepare the SQL query that returns the aggregated data.
+    sql_statement = """
+    select
+        chat_rooms.chat_room_id,
+        chat_rooms.channel_id,
+        chat_rooms.chat_room_status,
+        users.user_id as client_id
+    from
+        telegram_chat_rooms
+    left join chat_rooms on
+        telegram_chat_rooms.chat_room_id = chat_rooms.chat_room_id
+    left join chat_rooms_users_relationship on
+        chat_rooms.chat_room_id = chat_rooms_users_relationship.chat_room_id
+    left join users on
+        chat_rooms_users_relationship.user_id = users.user_id
+    where
+        telegram_chat_rooms.telegram_chat_id = %(telegram_chat_id)s
+    and
+        (
+            users.internal_user_id is null and users.identified_user_id is not null
+            or
+            users.internal_user_id is null and users.unidentified_user_id is not null
+        )
+    limit 1;
     """
-    # Define the GraphQL mutation query to the AppSync.
+
+    # Execute the SQL query dynamically, in a convenient and safe way.
+    try:
+        cursor.execute(sql_statement, sql_arguments)
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Return the aggregated data.
+    return cursor.fetchone()
+
+
+def create_chat_room(**kwargs) -> None:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        channel_technical_id = kwargs["channel_technical_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        client_id = kwargs["client_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        last_message_content = kwargs["last_message_content"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        telegram_chat_id = kwargs["telegram_chat_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        queue = kwargs["queue"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Define the GraphQL mutation.
     query = """
     mutation CreateChatRoom (
         $channelTechnicalId: String!,
-        $channelTypeName: String!,
         $clientId: String!,
+        $lastMessageContent: String!,
         $telegramChatId: String
     ) {
         createChatRoom(
             input: {
                 channelTechnicalId: $channelTechnicalId,
-                channelTypeName: $channelTypeName,
+                channelTypeName: "telegram",
                 clientId: $clientId,
+                lastMessageContent: $lastMessageContent,
                 telegramChatId: $telegramChatId
             }
         ) {
@@ -239,40 +295,48 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
             chatRoomId
             chatRoomStatus
             client {
-                userType
-                userSecondaryPhoneNumber
-                userSecondaryEmail
-                userProfilePhotoUrl
-                userPrimaryPhoneNumber
-                userPrimaryEmail
-                userMiddleName
-                userLastName
-                userId
-                userFirstName
-                metadata
+                country {
+                    countryAlpha2Code
+                    countryAlpha3Code
+                    countryCodeTopLevelDomain
+                    countryId
+                    countryNumericCode
+                    countryOfficialName
+                    countryShortName
+                }
                 gender {
                     genderId
                     genderPublicName
                     genderTechnicalName
                 }
-                country {
-                    countryAlpha2Code
-                    countryAlpha3Code
-                    countryCodeTopLevelDomain
-                    countryNumericCode
-                    countryId
-                    countryOfficialName
-                    countryShortName
-                }
+                metadata
+                telegramUsername
+                userFirstName
+                userId
+                userLastName
+                userMiddleName
+                userPrimaryEmail
+                userPrimaryPhoneNumber
+                userProfilePhotoUrl
+                userSecondaryEmail
+                userSecondaryPhoneNumber
+                userType
+                whatsappProfile
+                whatsappUsername
             }
+            lastMessageContent
+            lastMessageDateTime
             organizationsIds
+            unreadMessagesNumber
         }
     }
     """
+
+    # Define the GraphQL variables.
     variables = {
         "channelTechnicalId": channel_technical_id,
-        "channelTypeName": channel_type_name,
         "clientId": client_id,
+        "lastMessageContent": last_message_content,
         "telegramChatId": telegram_chat_id
     }
 
@@ -282,8 +346,8 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
         "Content-Type": "application/json"
     }
 
+    # Execute POST request.
     try:
-        # Make the POST request to the AppSync.
         response = requests.post(
             APPSYNC_CORE_API_URL,
             json={
@@ -295,20 +359,225 @@ def create_chat_room(channel_technical_id, channel_type_name, client_id, telegra
         response.raise_for_status()
     except Exception as error:
         logger.error(error)
-        sys.exit(1)
+        raise Exception(error)
 
-    # Return the information about the specific chat room.
-    return response.json()
+    # Put the result of the function in the queue.
+    queue.put({"chat_room": response.json()})
+
+    # Return nothing.
+    return None
 
 
-def create_chat_room_message(chat_room_id, message_author_id, message_channel_id, message_type, message_text):
+@postgresql_wrapper
+def create_identified_user(**kwargs) -> None:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        cursor = kwargs["cursor"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        sql_arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        queue = kwargs["queue"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Prepare the SQL query that creates identified user.
+    sql_statement = """
+    insert into identified_users(
+        identified_user_first_name,
+        identified_user_last_name,
+        metadata,
+        telegram_username
+    ) values(
+        %(identified_user_first_name)s,
+        %(identified_user_last_name)s,
+        %(metadata)s,
+        %(telegram_username)s
+    )
+    on conflict on constraint identified_users_telegram_username_key 
+    do nothing
+    returning
+        identified_user_id;
     """
-    Function name:
-    create_chat_room_message
 
-    Function description:
-    The main task of this function is to create the message in the specific chat room.
+    # Execute the SQL query dynamically, in a convenient and safe way.
+    try:
+        cursor.execute(sql_statement, sql_arguments)
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Define the id of the created identified user.
+    sql_arguments["identified_user_id"] = cursor.fetchone()["identified_user_id"]
+
+    # Prepare the SQL query that creates the user.
+    sql_statement = "insert into users(identified_user_id) values(%(identified_user_id)s) returning user_id;"
+
+    # Execute the SQL query dynamically, in a convenient and safe way.
+    try:
+        cursor.execute(sql_statement, sql_arguments)
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Put the result of the function in the queue.
+    queue.put({"user_id": cursor.fetchone()["user_id"]})
+
+    # Return nothing.
+    return None
+
+
+def activate_closed_chat_room(**kwargs):
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        chat_room_id = kwargs["chat_room_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        client_id = kwargs["client_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        last_message_content = kwargs["last_message_content"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Define the GraphQL mutation.
+    query = """
+    mutation ActivateClosedChatRoom (
+        $chatRoomId: String!,
+        $clientId: String!,
+        $lastMessageContent: String!
+    ) {
+        activateClosedChatRoom(
+            input: {
+                chatRoomId: $chatRoomId,
+                clientId: $clientId,
+                lastMessageContent: $lastMessageContent
+            }
+        ) {
+            channel {
+                channelDescription
+                channelId
+                channelName
+                channelTechnicalId
+                channelType {
+                    channelTypeDescription
+                    channelTypeId
+                    channelTypeName
+                }
+            }
+            channelId
+            chatRoomId
+            chatRoomStatus
+            client {
+                country {
+                    countryAlpha2Code
+                    countryAlpha3Code
+                    countryCodeTopLevelDomain
+                    countryId
+                    countryNumericCode
+                    countryOfficialName
+                    countryShortName
+                }
+                gender {
+                    genderId
+                    genderPublicName
+                    genderTechnicalName
+                }
+                metadata
+                telegramUsername
+                userFirstName
+                userId
+                userLastName
+                userMiddleName
+                userPrimaryEmail
+                userPrimaryPhoneNumber
+                userProfilePhotoUrl
+                userSecondaryEmail
+                userSecondaryPhoneNumber
+                userType
+                whatsappProfile
+                whatsappUsername
+            }
+            lastMessageContent
+            lastMessageDateTime
+            organizationsIds
+            unreadMessagesNumber
+        }
+    }
     """
+
+    # Define the GraphQL variables.
+    variables = {
+        "chatRoomId": chat_room_id,
+        "clientId": client_id,
+        "lastMessageContent": last_message_content
+    }
+
+    # Define the header setting.
+    headers = {
+        "x-api-key": APPSYNC_CORE_API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    # Execute POST request.
+    try:
+        response = requests.post(
+            APPSYNC_CORE_API_URL,
+            json={
+                "query": query,
+                "variables": variables
+            },
+            headers=headers
+        )
+        response.raise_for_status()
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Return nothing.
+    return None
+
+
+def create_chat_room_message(**kwargs):
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        chat_room_id = kwargs["chat_room_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        message_author_id = kwargs["message_author_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        message_channel_id = kwargs["message_channel_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        message_type = kwargs["message_type"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        message_text = kwargs["message_text"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Define the GraphQL mutation.
     query = """
     mutation CreateChatRoomMessage (
         $chatRoomId: String!,
@@ -320,11 +589,12 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         createChatRoomMessage(
             input: {
                 chatRoomId: $chatRoomId,
+                localMessageId: null,
                 messageAuthorId: $messageAuthorId,
                 messageChannelId: $messageChannelId,
-                messageType: $messageType,
-                messageText: $messageText,
                 messageContentUrl: null,
+                messageText: $messageType,
+                messageType: $messageText,
                 quotedMessage: {
                     messageAuthorId: null,
                     messageChannelId: null,
@@ -337,6 +607,8 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         ) {
             channelId
             chatRoomId
+            chatRoomStatus
+            localMessageId
             messageAuthorId
             messageChannelId
             messageContentUrl
@@ -360,6 +632,8 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         }
     }
     """
+
+    # Define the GraphQL variables.
     variables = {
         "chatRoomId": chat_room_id,
         "messageAuthorId": message_author_id,
@@ -374,8 +648,8 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         "Content-Type": "application/json"
     }
 
+    # Execute POST request.
     try:
-        # Make the POST request to the AppSync.
         response = requests.post(
             APPSYNC_CORE_API_URL,
             json={
@@ -387,79 +661,72 @@ def create_chat_room_message(chat_room_id, message_author_id, message_channel_id
         response.raise_for_status()
     except Exception as error:
         logger.error(error)
-        sys.exit(1)
+        raise Exception(error)
 
-    # Return nothing.
-    return None
+    # Return JSON object of the response.
+    return response.json()
 
 
-def activate_closed_chat_room(chat_room_id, client_id):
-    """
-    Function name:
-    activate_closed_chat_room
+def update_message_data(**kwargs):
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        chat_room_id = kwargs["chat_room_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        messages_ids = kwargs["messages_ids"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
-    Function description:
-    The main task of this function is to activate a closed chat room when the client writes to it.
-    """
+    # Define the GraphQL mutation.
     query = """
-    mutation ActivateClosedChatRoom (
+    mutation UpdateMessageData (
         $chatRoomId: String!,
-        $clientId: String!
+        $messagesIds: [String!]!
     ) {
-        activateClosedChatRoom(
+        updateMessageData(
             input: {
                 chatRoomId: $chatRoomId,
-                clientId: $clientId
+                isClient: true,
+                messageStatus: "MESSAGE_IS_SENT",
+                messagesIds: $messagesIds
             }
         ) {
-            channel {
-                channelDescription
-                channelId
-                channelName
-                channelTechnicalId
-                channelType {
-                    channelTypeDescription
-                    channelTypeId
-                    channelTypeName
-                }
-            }
-            channelId
             chatRoomId
-            chatRoomStatus
-            organizationsIds
-            client {
-                country {
-                    countryAlpha2Code
-                    countryAlpha3Code
-                    countryCodeTopLevelDomain
-                    countryId
-                    countryNumericCode
-                    countryOfficialName
-                    countryShortName
-                }
-                metadata
-                userFirstName
-                userId
-                userLastName
-                userMiddleName
-                userPrimaryEmail
-                userPrimaryPhoneNumber
-                userProfilePhotoUrl
-                userSecondaryEmail
-                userSecondaryPhoneNumber
-                userType
-                gender {
-                    genderId
-                    genderPublicName
-                    genderTechnicalName
+            chatRoomMessages {
+                messageAuthorId
+                messageChannelId
+                messageContentUrl
+                messageCreatedDateTime
+                messageDeletedDateTime
+                messageId
+                messageIsDelivered
+                messageIsRead
+                messageIsSent
+                messageText
+                messageType
+                messageUpdatedDateTime
+                quotedMessage {
+                    messageAuthorId
+                    messageChannelId
+                    messageContentUrl
+                    messageId
+                    messageText
+                    messageType
                 }
             }
+            chatRoomStatus
+            unreadMessagesNumber
         }
     }
     """
+
+    # Define the GraphQL variables.
     variables = {
         "chatRoomId": chat_room_id,
-        "clientId": client_id
+        "messagesIds": messages_ids
     }
 
     # Define the header setting.
@@ -468,8 +735,8 @@ def activate_closed_chat_room(chat_room_id, client_id):
         "Content-Type": "application/json"
     }
 
+    # Execute POST request.
     try:
-        # Make the POST request to the AppSync.
         response = requests.post(
             APPSYNC_CORE_API_URL,
             json={
@@ -481,143 +748,179 @@ def activate_closed_chat_room(chat_room_id, client_id):
         response.raise_for_status()
     except Exception as error:
         logger.error(error)
-        sys.exit(1)
+        raise Exception(error)
 
     # Return nothing.
     return None
 
 
-def get_chat_room_information(postgresql_db_connection, telegram_chat_id):
+def lambda_handler(event, context):
     """
-    Function name:
-    get_chat_room
-
-    Function description:
-    The main task of this function is to give aggregated data about the specific chat room.
+    :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
+    :param context: The AWS Lambda function uses this parameter to provide runtime information to your handler.
     """
-    # With a dictionary cursor, the data is sent in a form of Python dictionaries.
-    cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
-
-    # Check if the database has chat room information for the specific telegram conversation.
-    statement = """
-    select
-        chat_rooms.chat_room_id,
-        chat_rooms.channel_id,
-        chat_rooms.chat_room_status,
-        (
-            select
-                users.user_id
-            from
-                chat_rooms_users_relationship
-            left join users on
-                chat_rooms_users_relationship.user_id = users.user_id
-            where
-                chat_rooms_users_relationship.chat_room_id = chat_rooms.chat_room_id
-            and
-                (
-                    users.internal_user_id is null and users.identified_user_id is not null
-                    or
-                    users.internal_user_id is null and users.unidentified_user_id is not null
-                )
-            limit 1
-        ) as client_id
-    from
-        chat_rooms
-    left join telegram_chat_rooms on
-        chat_rooms.chat_room_id = telegram_chat_rooms.chat_room_id
-    where
-        telegram_chat_rooms.telegram_chat_id = '{0}'
-    limit 1;
-    """.format(telegram_chat_id)
-
-    # Execute a previously prepared SQL query.
+    # Parse the JSON object.
     try:
-        cursor.execute(statement)
+        body = json.loads(event["body"])
     except Exception as error:
         logger.error(error)
-        sys.exit(1)
+        raise Exception(error)
+    message = body.get("message", None)
 
-    # After the successful execution of the query commit your changes to the database.
-    postgresql_db_connection.commit()
+    # Check if the message object is available in the JSON object.
+    if message:
+        # Define the telegram chat id and message text which the client sent.
+        try:
+            telegram_chat_id = message["chat"]["id"]
+        except Exception as error:
+            logger.error(error)
+            raise Exception(error)
+        message_text = message.get("text", None)
 
-    # Determine aggregated data about the specific chat room from the database.
-    aggregated_data = cursor.fetchone()
+        # Define the business account from which clients write.
+        try:
+            business_account = event['rawPath'].rsplit('/', 1)[1]
+        except Exception as error:
+            logger.error(error)
+            raise Exception(error)
 
-    # The cursor will be unusable from this point forward.
-    cursor.close()
+        # Define the instances of the database connections.
+        postgresql_connection = reuse_or_recreate_postgresql_connection()
 
-    # Return the information about the specific chat room.
-    return aggregated_data
+        # Get telegram bot token from the database.
+        telegram_bot_token = get_telegram_bot_token(
+            postgresql_connection=postgresql_connection,
+            sql_arguments={
+                "business_account": business_account
+            }
+        )
 
+        # Check if message text is available.
+        if message_text:
+            # Define a few necessary variables that will be used in the future.
+            metadata = message.get("from", None)
+            first_name = metadata.get("first_name", None)
+            last_name = metadata.get("last_name", None)
+            telegram_username = metadata.get("username", None)
+            is_bot = metadata.get("is_bot", None)
 
-def create_identified_user(postgresql_db_connection, first_name, last_name, metadata, telegram_username):
-    """
-    Function name:
-    create_identified_user
+            # Check whether a person or bot writes to us.
+            if not is_bot:
+                # Check the value of the message text which was sent.
+                if message_text == "/start":
+                    # Define the message text.
+                    message_text = "🤖💬\nЗдравствуйте! Чем мы можем Вам помочь?"
 
-    Function description:
-    The main task of this function is to create a identified user in the database.
-    """
-    # With a dictionary cursor, the data is sent in a form of Python dictionaries.
-    cursor = postgresql_db_connection.cursor(cursor_factory=RealDictCursor)
+                    # Send the prepared text to the telegram client.
+                    send_message_to_telegram(
+                        telegram_bot_token=telegram_bot_token,
+                        message_text=message_text,
+                        telegram_chat_id=telegram_chat_id
+                    )
+                else:
+                    # Get the aggregated data.
+                    aggregated_data = get_aggregated_data(
+                        postgresql_connection=postgresql_connection,
+                        sql_arguments={
+                            "telegram_chat_id": telegram_chat_id
+                        }
+                    )
 
-    # Prepare the SQL request that creates the new identified user.
-    statement = """
-    insert into identified_users(
-        identified_user_first_name,
-        identified_user_last_name,
-        metadata,
-        telegram_username
-    ) values(
-        {0},
-        {1},
-        '{2}',
-        {3}
-    )
-    on conflict on constraint identified_users_telegram_username_key 
-    do nothing
-    returning
-        identified_user_id;
-    """.format(
-        'null' if first_name is None or len(first_name) == 0 else "'{0}'".format(first_name),
-        'null' if last_name is None or len(last_name) == 0 else "'{0}'".format(last_name),
-        json.dumps(metadata),
-        'null' if telegram_username is None or len(telegram_username) == 0 else "'{0}'".format(telegram_username),
-    )
+                    # Define a few necessary variables that will be used in the future.
+                    chat_room_id = aggregated_data.get("chat_room_id", None)
+                    channel_id = aggregated_data.get("channel_id", None)
+                    chat_room_status = aggregated_data.get("chat_room_status", None)
+                    client_id = aggregated_data.get("client_id", None)
 
-    # Execute a previously prepared SQL query.
-    try:
-        cursor.execute(statement)
-    except Exception as error:
-        logger.error(error)
-        sys.exit(1)
+                    # Check the chat room status.
+                    if not chat_room_status:
+                        # Run several functions in parallel.
+                        results_of_tasks = run_multithreading_tasks([
+                            {
+                                "function_object": create_identified_user,
+                                "function_arguments": {
+                                    "postgresql_connection": postgresql_connection,
+                                    "sql_arguments": {
+                                        "identified_user_first_name": first_name,
+                                        "identified_user_last_name": last_name,
+                                        "metadata": metadata,
+                                        "telegram_username": telegram_username
+                                    }
+                                }
+                            },
+                            {
+                                "function_object": create_chat_room,
+                                "function_arguments": {
+                                    "channel_technical_id": telegram_bot_token,
+                                    "client_id": client_id,
+                                    "last_message_content": message_text,
+                                    "telegram_chat_id": telegram_chat_id
+                                }
+                            }
+                        ])
 
-    # After the successful execution of the query commit your changes to the database.
-    postgresql_db_connection.commit()
+                        # Define a few necessary variables that will be used in the future.
+                        try:
+                            chat_room = results_of_tasks["chat_room"]
+                        except Exception as error:
+                            logger.error(error)
+                            raise Exception(error)
+                        try:
+                            client_id = results_of_tasks["client_id"]
+                        except Exception as error:
+                            logger.error(error)
+                            raise Exception(error)
+                        try:
+                            chat_room_id = chat_room["data"]["createChatRoom"]["chatRoomId"]
+                        except Exception as error:
+                            logger.error(error)
+                            raise Exception(error)
+                        try:
+                            channel_id = chat_room["data"]["createChatRoom"]["channelId"]
+                        except Exception as error:
+                            logger.error(error)
+                            raise Exception(error)
+                    elif chat_room_status == "completed":
+                        # Activate closed chat room before sending a message to the operator.
+                        activate_closed_chat_room(
+                            chat_room_id=chat_room_id,
+                            client_id=client_id,
+                            last_message_content=message_text
+                        )
 
-    # Define the id of the created identified user.
-    identified_user_id = cursor.fetchone()["identified_user_id"]
+                    # Send the message to the operator and save it in the database.
+                    chat_room_message = create_chat_room_message(
+                        chat_room_id=chat_room_id,
+                        message_author_id=client_id,
+                        message_channel_id=channel_id,
+                        message_type="text",
+                        message_text=message_text
+                    )
 
-    # Prepare the SQL request that creates the new user.
-    statement = """
-    insert into users(identified_user_id)
-    values('{0}')
-    returning
-        user_id;
-    """.format(identified_user_id)
+                    # Define the id of the created message.
+                    try:
+                        message_id = chat_room_message["data"]["createChatRoomMessage"]["messageId"]
+                    except Exception as error:
+                        logger.error(error)
+                        raise Exception(error)
 
-    # Execute a previously prepared SQL query.
-    try:
-        cursor.execute(statement)
-    except Exception as error:
-        logger.error(error)
-        sys.exit(1)
+                    # Update the data (unread message number / message status) of the created message.
+                    update_message_data(
+                        chat_room_id=chat_room_id,
+                        messages_ids=[message_id]
+                    )
+        else:
+            # Define the message text.
+            message_text = "🤖💬\nОбработка данного формата в данный момент невозможна."
 
-    # After the successful execution of the query commit your changes to the database.
-    postgresql_db_connection.commit()
+            # Send the prepared text to the telegram client.
+            send_message_to_telegram(
+                telegram_bot_token=telegram_bot_token,
+                message_text=message_text,
+                telegram_chat_id=telegram_chat_id
+            )
 
-    # Define the id of the created user.
-    user_id = cursor.fetchone()["user_id"]
-
-    # Return the id of the created user.
-    return user_id
+    # Return the status code 200.
+    return {
+        "statusCode": 200
+    }
