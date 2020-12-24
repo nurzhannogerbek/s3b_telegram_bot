@@ -238,10 +238,6 @@ def lambda_handler(event, context):
         logger.error(error)
         raise Exception(error)
 
-    """
-    :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
-    :param context: The AWS Lambda function uses this parameter to provide runtime information to your handler.
-    """
     # Run several initialization functions in parallel.
     results_of_tasks = run_multithreading_tasks([
         {

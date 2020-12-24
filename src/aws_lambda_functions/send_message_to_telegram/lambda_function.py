@@ -275,11 +275,6 @@ def create_chat_room_message(**kwargs) -> None:
     quoted_message_text = input_arguments.get("quoted_message_text", None)
     quoted_message_content_url = input_arguments.get("quoted_message_content_url", None)
     local_message_id = input_arguments.get("local_message_id", None)
-    try:
-        queue = kwargs["queue"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
 
     # Define the GraphQL mutation.
     query = """
@@ -288,24 +283,31 @@ def create_chat_room_message(**kwargs) -> None:
         $messageAuthorId: String!,
         $messageChannelId: String!,
         $messageType: String!,
-        $messageText: String
+        $messageText: String,
+        $messageContentUrl: String,
+        $quotedMessageId: String,
+        $quotedMessageAuthorId: String,
+        $quotedMessageChannelId: String,
+        $quotedMessageText: String,
+        $quotedMessageContentUrl: String,
+        $localMessageId: String
     ) {
         createChatRoomMessage(
             input: {
                 chatRoomId: $chatRoomId,
-                localMessageId: null,
+                localMessageId: $localMessageId,
                 messageAuthorId: $messageAuthorId,
                 messageChannelId: $messageChannelId,
-                messageContentUrl: null,
-                messageText: $messageType,
-                messageType: $messageText,
+                messageContentUrl: $messageContentUrl,
+                messageText: $messageText,
+                messageType: messageType,
                 quotedMessage: {
-                    messageAuthorId: null,
-                    messageChannelId: null,
-                    messageContentUrl: null,
-                    messageId: null,
-                    messageText: null,
-                    messageType: null
+                    messageAuthorId: $quotedMessageAuthorId,
+                    messageChannelId: $quotedMessageChannelId,
+                    messageContentUrl: $quotedMessageContentUrl,
+                    messageId: $quotedMessageId,
+                    messageText: $quotedMessageText,
+                    messageType: $quotedMessageType
                 }
             }
         ) {

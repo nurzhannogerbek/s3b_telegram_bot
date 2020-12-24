@@ -593,8 +593,8 @@ def create_chat_room_message(**kwargs):
                 messageAuthorId: $messageAuthorId,
                 messageChannelId: $messageChannelId,
                 messageContentUrl: null,
-                messageText: $messageType,
-                messageType: $messageText,
+                messageText: $messageText,
+                messageType: $messageType,
                 quotedMessage: {
                     messageAuthorId: null,
                     messageChannelId: null,
