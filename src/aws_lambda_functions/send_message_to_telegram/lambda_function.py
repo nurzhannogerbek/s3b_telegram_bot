@@ -376,8 +376,8 @@ def create_chat_room_message(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
 
-    # Return nothing.
-    return None
+    # Return the JSON object of the response.
+    return response.json()
 
 
 def send_message_to_telegram(**kwargs) -> None:
@@ -474,10 +474,7 @@ def lambda_handler(event, context):
         raise Exception(error)
 
     # Send the message to the operator and save it in the database.
-    create_chat_room_message(input_arguments=input_arguments)
-
-    # Define the variable which stores information about the message of the chat room.
-    chat_room_message = results_of_tasks["chat_room_message"]
+    chat_room_message = create_chat_room_message(input_arguments=input_arguments)
 
     # Define the message text.
     message_text = "🙂💬\n{0}".format(message_text)
