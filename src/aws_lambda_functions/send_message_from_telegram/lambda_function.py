@@ -842,6 +842,7 @@ def lambda_handler(event, context):
                             telegram_chat_id=telegram_chat_id
                         )
 
+                        # Define a few necessary variables that will be used in the future.
                         try:
                             chat_room_id = chat_room["data"]["createChatRoom"]["chatRoomId"]
                         except Exception as error:
