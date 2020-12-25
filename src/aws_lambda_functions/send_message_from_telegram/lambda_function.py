@@ -695,6 +695,7 @@ def update_message_data(**kwargs):
             }
         ) {
             chatRoomId
+            channelId
             chatRoomMessages {
                 messageAuthorId
                 messageChannelId
