@@ -829,7 +829,7 @@ def lambda_handler(event, context):
                             sql_arguments={
                                 "identified_user_first_name": first_name,
                                 "identified_user_last_name": last_name,
-                                "metadata": metadata,
+                                "metadata": json.dumps(metadata),
                                 "telegram_username": telegram_username
                             }
                         )
