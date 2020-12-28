@@ -704,7 +704,9 @@ def update_message_data(**kwargs):
                 }
             }
             chatRoomStatus
-            unreadMessagesNumber
+            unreadMessagesNumber,
+            channelTypeName,
+            isClient
         }
     }
     """
