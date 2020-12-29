@@ -321,6 +321,7 @@ def create_chat_room(**kwargs) -> json:
             }
             lastMessageContent
             lastMessageDateTime
+            lastMessageFromClientDateTime
             organizationsIds
             unreadMessagesNumber
         }
@@ -495,6 +496,7 @@ def activate_closed_chat_room(**kwargs):
             }
             lastMessageContent
             lastMessageDateTime
+            lastMessageFromClientDateTime
             organizationsIds
             unreadMessagesNumber
         }
@@ -574,6 +576,7 @@ def create_chat_room_message(**kwargs):
             input: {
                 chatRoomId: $chatRoomId,
                 localMessageId: null,
+                isClient: true,
                 messageAuthorId: $messageAuthorId,
                 messageChannelId: $messageChannelId,
                 messageContentUrl: null,
