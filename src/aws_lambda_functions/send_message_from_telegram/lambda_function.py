@@ -362,6 +362,47 @@ def create_chat_room(**kwargs) -> json:
 
 
 @postgresql_wrapper
+def get_identified_user_data(**kwargs) -> AnyStr:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        cursor = kwargs["cursor"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        sql_arguments = kwargs["sql_arguments"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Prepare an SQL query that returns the data of the identified user.
+    sql_statement = """
+    select
+	    users.user_id
+    from
+	    identified_users
+    left join users on
+	    identified_users.identified_user_id = users.identified_user_id
+    where
+	    identified_users.telegram_username = %(telegram_username)s
+    and
+	    users.internal_user_id is null
+    and
+	    users.unidentified_user_id is null
+    limit 1;
+    """
+
+    # Execute the SQL query dynamically, in a convenient and safe way.
+    try:
+        cursor.execute(sql_statement, sql_arguments)
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Return the id of the user.
+    return cursor.fetchone()["user_id"]
+
+@postgresql_wrapper
 def create_identified_user(**kwargs) -> AnyStr:
     # Check if the input dictionary has all the necessary keys.
     try:
@@ -828,16 +869,25 @@ def lambda_handler(event, context):
 
                     # Check the chat room status.
                     if chat_room_status is None:
-                        # Create the new user.
-                        client_id = create_identified_user(
+                        # Check whether the user was registered in the system earlier.
+                        client_id = get_identified_user_data(
                             postgresql_connection=postgresql_connection,
                             sql_arguments={
-                                "identified_user_first_name": first_name,
-                                "identified_user_last_name": last_name,
-                                "metadata": json.dumps(metadata),
                                 "telegram_username": telegram_username
                             }
                         )
+
+                        # Create the new user.
+                        if client_id is None:
+                            client_id = create_identified_user(
+                                postgresql_connection=postgresql_connection,
+                                sql_arguments={
+                                    "identified_user_first_name": first_name,
+                                    "identified_user_last_name": last_name,
+                                    "metadata": json.dumps(metadata),
+                                    "telegram_username": telegram_username
+                                }
+                            )
 
                         # Create the new chat room.
                         chat_room = create_chat_room(
