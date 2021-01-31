@@ -894,7 +894,7 @@ def lambda_handler(event, context):
                             channel_technical_id=telegram_bot_token,
                             client_id=client_id,
                             last_message_content=message_text,
-                            telegram_chat_id=telegram_chat_id
+                            telegram_chat_id="{0}:{1}".format(business_account, telegram_chat_id)
                         )
 
                         # Define a few necessary variables that will be used in the future.
