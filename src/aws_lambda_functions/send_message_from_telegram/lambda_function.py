@@ -854,7 +854,7 @@ def lambda_handler(event, context):
                     aggregated_data = get_aggregated_data(
                         postgresql_connection=postgresql_connection,
                         sql_arguments={
-                            "telegram_chat_id": telegram_chat_id
+                            "telegram_chat_id": "{0}_{1}".format(business_account, telegram_chat_id)
                         }
                     )
 
