@@ -378,7 +378,7 @@ def get_identified_user_data(**kwargs) -> AnyStr:
     # Prepare an SQL query that returns the data of the identified user.
     sql_statement = """
     select
-	    users.user_id
+	    users.user_id::text
     from
 	    identified_users
     left join users on
