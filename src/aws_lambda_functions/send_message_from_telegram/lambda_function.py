@@ -402,6 +402,7 @@ def get_identified_user_data(**kwargs) -> AnyStr:
     # Return the id of the user.
     return cursor.fetchone()["user_id"]
 
+
 @postgresql_wrapper
 def create_identified_user(**kwargs) -> AnyStr:
     # Check if the input dictionary has all the necessary keys.
