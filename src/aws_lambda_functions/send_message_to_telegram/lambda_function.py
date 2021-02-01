@@ -232,7 +232,7 @@ def get_aggregated_data(**kwargs) -> Dict:
     # Prepare the SQL query that gives the minimal information about the chat room.
     sql_statement = """
     select
-        telegram_chat_rooms.telegram_chat_id,
+        split_part(telegram_chat_rooms.telegram_chat_id , ':', 2) as telegram_chat_id,
         channels.channel_technical_id as telegram_bot_token
     from
         chat_rooms
