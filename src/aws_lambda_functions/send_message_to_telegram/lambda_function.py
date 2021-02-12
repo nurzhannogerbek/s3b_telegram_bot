@@ -112,11 +112,8 @@ def check_input_arguments(**kwargs) -> None:
             raise Exception("The 'messageChannelId' argument format is not UUID.")
     else:
         raise Exception("The 'messageChannelId' argument can't be None/Null/Undefined.")
-    message_type = input_arguments.get("messageType", None)
-    if message_type is None:
-        raise Exception("The 'messageType' argument can't be None/Null/Undefined.")
     message_text = input_arguments.get("messageText", None)
-    message_content_url = input_arguments.get("messageContentUrl", None)
+    message_content = input_arguments.get("messageContent", None)
     try:
         quoted_message_id = input_arguments["quotedMessage"]["messageId"]
     except KeyError:
@@ -145,17 +142,13 @@ def check_input_arguments(**kwargs) -> None:
         except ValueError:
             raise Exception("The 'quotedMessageChannelId' argument format is not UUID.")
     try:
-        quoted_message_type = input_arguments["quotedMessage"]["messageType"]
-    except KeyError:
-        quoted_message_type = None
-    try:
         quoted_message_text = input_arguments["quotedMessage"]["messageText"]
     except KeyError:
         quoted_message_text = None
     try:
-        quoted_message_content_url = input_arguments["quotedMessage"]["messageContentUrl"]
+        quoted_message_content = input_arguments["quotedMessage"]["messageContent"]
     except KeyError:
-        quoted_message_content_url = None
+        quoted_message_content = None
     local_message_id = input_arguments.get("localMessageId", None)
 
     # Put the result of the function in the queue.
@@ -164,15 +157,13 @@ def check_input_arguments(**kwargs) -> None:
             "chat_room_id": chat_room_id,
             "message_author_id": message_author_id,
             "message_channel_id": message_channel_id,
-            "message_type": message_type,
             "message_text": message_text,
-            "message_content_url": message_content_url,
+            "message_content": message_content,
             "quoted_message_id": quoted_message_id,
             "quoted_message_author_id": quoted_message_author_id,
             "quoted_message_channel_id": quoted_message_channel_id,
-            "quoted_message_type": quoted_message_type,
             "quoted_message_text": quoted_message_text,
-            "quoted_message_content_url": quoted_message_content_url,
+            "quoted_message_content": quoted_message_content,
             "local_message_id": local_message_id
         }
     })
