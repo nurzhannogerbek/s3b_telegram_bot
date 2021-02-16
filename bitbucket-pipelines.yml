@@ -69,7 +69,7 @@ deploy:
                 },
                 {
                   'ParameterKey': 'AppsyncCoreApiUrl',
-                  'ParameterValue': ${APPSYNC_CORE_API_URL}
+                  'ParameterValue': '${APPSYNC_CORE_API_URL}'
                 },
                 {
                   'ParameterKey': 'AppsyncCoreApiKey',
