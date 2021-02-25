@@ -247,26 +247,38 @@ def get_aggregated_data(**kwargs) -> Dict:
     return cursor.fetchone()
 
 
-def create_chat_room_message(**kwargs) -> Dict[AnyStr, Any]:
+def create_chat_room_message(**kwargs):
     # Check if the input dictionary has all the necessary keys.
     try:
         input_arguments = kwargs["input_arguments"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
-    chat_room_id = input_arguments.get("chat_room_id", None)
-    message_author_id = input_arguments.get("message_author_id", None)
-    message_channel_id = input_arguments.get("message_channel_id", None)
-    message_type = input_arguments.get("message_type", None)
-    message_text = input_arguments.get("message_text", None)
-    message_content_url = input_arguments.get("message_content_url", None)
-    quoted_message_id = input_arguments.get("quoted_message_id", None)
-    quoted_message_author_id = input_arguments.get("quoted_message_author_id", None)
-    quoted_message_channel_id = input_arguments.get("quoted_message_channel_id", None)
-    quoted_message_text = input_arguments.get("quoted_message_text", None)
-    quoted_message_type = input_arguments.get("quoted_message_type", None)
-    quoted_message_content_url = input_arguments.get("quoted_message_content_url", None)
-    local_message_id = input_arguments.get("local_message_id", None)
+    try:
+        chat_room_id = input_arguments["chat_room_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        message_author_id = input_arguments["message_author_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        message_channel_id = input_arguments["message_channel_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        message_text = input_arguments["message_text"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        message_content = input_arguments["message_content"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Define the GraphQL mutation.
     query = """
@@ -274,34 +286,24 @@ def create_chat_room_message(**kwargs) -> Dict[AnyStr, Any]:
         $chatRoomId: String!,
         $messageAuthorId: String!,
         $messageChannelId: String!,
-        $messageType: String!,
         $messageText: String,
-        $messageContentUrl: String,
-        $quotedMessageId: String,
-        $quotedMessageAuthorId: String,
-        $quotedMessageChannelId: String,
-        $quotedMessageText: String,
-        $quotedMessageType: String,
-        $quotedMessageContentUrl: String,
-        $localMessageId: String
+        $messageContent: String
     ) {
         createChatRoomMessage(
             input: {
                 chatRoomId: $chatRoomId,
-                localMessageId: $localMessageId,
-                isClient: false,
+                localMessageId: null,
+                isClient: true,
                 messageAuthorId: $messageAuthorId,
                 messageChannelId: $messageChannelId,
-                messageContentUrl: $messageContentUrl,
+                messageContent: $messageContent,
                 messageText: $messageText,
-                messageType: $messageType,
                 quotedMessage: {
-                    messageAuthorId: $quotedMessageAuthorId,
-                    messageChannelId: $quotedMessageChannelId,
-                    messageContentUrl: $quotedMessageContentUrl,
-                    messageId: $quotedMessageId,
-                    messageText: $quotedMessageText,
-                    messageType: $quotedMessageType
+                    messageAuthorId: null,
+                    messageChannelId: null,
+                    messageContent: null,
+                    messageId: null,
+                    messageText: null
                 }
             }
         ) {
@@ -312,7 +314,7 @@ def create_chat_room_message(**kwargs) -> Dict[AnyStr, Any]:
             localMessageId
             messageAuthorId
             messageChannelId
-            messageContentUrl
+            messageContent
             messageCreatedDateTime
             messageDeletedDateTime
             messageId
@@ -320,15 +322,13 @@ def create_chat_room_message(**kwargs) -> Dict[AnyStr, Any]:
             messageIsRead
             messageIsSent
             messageText
-            messageType
             messageUpdatedDateTime
             quotedMessage {
                 messageAuthorId
                 messageChannelId
-                messageContentUrl
+                messageContent
                 messageId
                 messageText
-                messageType
             }
         }
     }
@@ -339,16 +339,8 @@ def create_chat_room_message(**kwargs) -> Dict[AnyStr, Any]:
         "chatRoomId": chat_room_id,
         "messageAuthorId": message_author_id,
         "messageChannelId": message_channel_id,
-        "messageType": message_type,
         "messageText": message_text,
-        "messageContentUrl": message_content_url,
-        "quotedMessageId": quoted_message_id,
-        "quotedMessageAuthorId": quoted_message_author_id,
-        "quotedMessageChannelId": quoted_message_channel_id,
-        "quotedMessageText": quoted_message_text,
-        "$quotedMessageType": quoted_message_type,
-        "quotedMessageContentUrl": quoted_message_content_url,
-        "localMessageId": local_message_id
+        "messageContent": message_content
     }
 
     # Define the header setting.
@@ -372,7 +364,7 @@ def create_chat_room_message(**kwargs) -> Dict[AnyStr, Any]:
         logger.error(error)
         raise Exception(error)
 
-    # Return the JSON object of the response.
+    # Return JSON object of the response.
     return response.json()
 
 
