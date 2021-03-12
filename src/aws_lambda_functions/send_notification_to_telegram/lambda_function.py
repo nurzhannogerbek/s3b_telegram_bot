@@ -187,7 +187,7 @@ def get_aggregated_data(**kwargs) -> Dict:
     return cursor.fetchone()
 
 
-def send_message_to_telegram(**kwargs) -> None:
+def send_message_text_to_telegram(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
         telegram_bot_token = kwargs["telegram_bot_token"]
@@ -195,12 +195,12 @@ def send_message_to_telegram(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
     try:
-        message_text = kwargs["message_text"]
+        telegram_chat_id = kwargs["telegram_chat_id"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
     try:
-        telegram_chat_id = kwargs["telegram_chat_id"]
+        message_text = kwargs["message_text"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -210,8 +210,8 @@ def send_message_to_telegram(**kwargs) -> None:
 
     # Create the parameters.
     parameters = {
-        "text": message_text,
-        "chat_id": telegram_chat_id
+        "chat_id": telegram_chat_id,
+        "text": message_text
     }
 
     # Execute GET request.
@@ -283,11 +283,11 @@ def lambda_handler(event, context):
     # Define the message text.
     message_text = "🤖💬\n{0}".format(notification_description)
 
-    # Send the prepared text to the telegram client.
-    send_message_to_telegram(
+    # Send the message text to the telegram.
+    send_message_text_to_telegram(
         telegram_bot_token=telegram_bot_token,
-        message_text=message_text,
-        telegram_chat_id=telegram_chat_id
+        telegram_chat_id=telegram_chat_id,
+        message_text=message_text
     )
 
     # Return the status code 200.

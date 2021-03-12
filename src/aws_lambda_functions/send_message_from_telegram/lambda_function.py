@@ -145,7 +145,7 @@ def get_telegram_bot_token(**kwargs) -> AnyStr:
     return cursor.fetchone()["telegram_bot_token"]
 
 
-def send_message_to_telegram(**kwargs) -> None:
+def send_message_text_to_telegram(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
         telegram_bot_token = kwargs["telegram_bot_token"]
@@ -153,12 +153,12 @@ def send_message_to_telegram(**kwargs) -> None:
         logger.error(error)
         raise Exception(error)
     try:
-        message_text = kwargs["message_text"]
+        telegram_chat_id = kwargs["telegram_chat_id"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
     try:
-        telegram_chat_id = kwargs["telegram_chat_id"]
+        message_text = kwargs["message_text"]
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
@@ -168,8 +168,8 @@ def send_message_to_telegram(**kwargs) -> None:
 
     # Create the parameters.
     parameters = {
-        "text": message_text,
-        "chat_id": telegram_chat_id
+        "chat_id": telegram_chat_id,
+        "text": message_text
     }
 
     # Execute GET request.
@@ -370,17 +370,17 @@ def get_identified_user_data(**kwargs) -> AnyStr:
     # Prepare an SQL query that returns the data of the identified user.
     sql_statement = """
     select
-	    users.user_id::text
+        users.user_id::text
     from
-	    identified_users
+        identified_users
     left join users on
-	    identified_users.identified_user_id = users.identified_user_id
+        identified_users.identified_user_id = users.identified_user_id
     where
-	    identified_users.telegram_username = %(telegram_username)s
+        identified_users.telegram_username = %(telegram_username)s
     and
-	    users.internal_user_id is null
+        users.internal_user_id is null
     and
-	    users.unidentified_user_id is null
+        users.unidentified_user_id is null
     limit 1;
     """
 
@@ -833,11 +833,11 @@ def lambda_handler(event, context):
                     # Define the message text.
                     message_text = "🤖💬\nЗдравствуйте! Чем мы можем Вам помочь?"
 
-                    # Send the prepared text to the telegram client.
-                    send_message_to_telegram(
+                    # Send the message text to the telegram.
+                    send_message_text_to_telegram(
                         telegram_bot_token=telegram_bot_token,
-                        message_text=message_text,
-                        telegram_chat_id=telegram_chat_id
+                        telegram_chat_id=telegram_chat_id,
+                        message_text=message_text
                     )
                 else:
                     # Get the aggregated data.
@@ -931,11 +931,11 @@ def lambda_handler(event, context):
             # Define the message text.
             message_text = "🤖💬\nОбработка данного формата в данный момент невозможна."
 
-            # Send the prepared text to the telegram client.
-            send_message_to_telegram(
+            # Send the message text to the telegram.
+            send_message_text_to_telegram(
                 telegram_bot_token=telegram_bot_token,
-                message_text=message_text,
-                telegram_chat_id=telegram_chat_id
+                telegram_chat_id=telegram_chat_id,
+                message_text=message_text
             )
 
     # Return the status code 200.
