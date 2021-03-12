@@ -441,46 +441,6 @@ def get_the_presigned_url(**kwargs) -> AnyStr:
     return presigned_url
 
 
-def send_collection_to_telegram(**kwargs) -> None:
-    # Check if the input dictionary has all the necessary keys.
-    try:
-        telegram_bot_token = kwargs["telegram_bot_token"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        telegram_chat_id = kwargs["telegram_chat_id"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-    try:
-        collection = kwargs["collection"]
-    except KeyError as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Create the request URL address.
-    # https://core.telegram.org/bots/api#sendmediagroup
-    request_url = "{0}/bot{1}/sendMediaGroup".format(TELEGRAM_API_URL, telegram_bot_token)
-
-    # Define the JSON object body of the POST request.
-    data = {
-        "chat_id": telegram_chat_id,
-        "media": collection
-    }
-
-    # Execute the POST request.
-    try:
-        response = requests.post(request_url, data=json.dumps(data))
-        response.raise_for_status()
-    except Exception as error:
-        logger.error(error)
-        raise Exception(error)
-
-    # Return nothing.
-    return None
-
-
 def send_gif_to_telegram(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
@@ -538,6 +498,11 @@ def send_document_to_telegram(**kwargs) -> None:
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
+    try:
+        caption = kwargs["caption"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Create the request URL address.
     # https://core.telegram.org/bots/api#senddocument
@@ -548,6 +513,10 @@ def send_document_to_telegram(**kwargs) -> None:
         "chat_id": telegram_chat_id,
         "document": document_url
     }
+
+    # Document caption (may also be used when resending documents by file_id), 0-1024 characters after entities parsing.
+    if caption is not None:
+        parameters["caption"] = caption
 
     # Execute the POST request.
     try:
@@ -578,6 +547,11 @@ def send_image_to_telegram(**kwargs) -> None:
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
+    try:
+        caption = kwargs["caption"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Create the request URL address.
     # https://core.telegram.org/bots/api#sendphoto
@@ -588,6 +562,10 @@ def send_image_to_telegram(**kwargs) -> None:
         "chat_id": telegram_chat_id,
         "photo": image_url
     }
+
+    # Photo caption (may also be used when resending photos by file_id), 0-1024 characters after entities parsing.
+    if caption is not None:
+        parameters["caption"] = caption
 
     # Execute the POST request.
     try:
@@ -618,6 +596,11 @@ def send_video_to_telegram(**kwargs) -> None:
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
+    try:
+        caption = kwargs["caption"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Create the request URL address.
     # https://core.telegram.org/bots/api#sendvideo
@@ -628,6 +611,10 @@ def send_video_to_telegram(**kwargs) -> None:
         "chat_id": telegram_chat_id,
         "video": video_url
     }
+
+    # Video caption (may also be used when resending videos by file_id), 0-1024 characters after entities parsing.
+    if caption is not None:
+        parameters["caption"] = caption
 
     # Execute the POST request.
     try:
@@ -658,6 +645,11 @@ def send_audio_to_telegram(**kwargs) -> None:
     except KeyError as error:
         logger.error(error)
         raise Exception(error)
+    try:
+        caption = kwargs["caption"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
 
     # Create the request URL address.
     # https://core.telegram.org/bots/api#sendaudio
@@ -669,9 +661,53 @@ def send_audio_to_telegram(**kwargs) -> None:
         "audio": audio_url
     }
 
+    # Audio caption, 0-1024 characters after entities parsing.
+    if caption is not None:
+        parameters["caption"] = caption
+
     # Execute the POST request.
     try:
         response = requests.post(request_url, params=parameters)
+        response.raise_for_status()
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Return nothing.
+    return None
+
+
+def send_collection_to_telegram(**kwargs) -> None:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        telegram_bot_token = kwargs["telegram_bot_token"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        telegram_chat_id = kwargs["telegram_chat_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        collection = kwargs["collection"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Create the request URL address.
+    # https://core.telegram.org/bots/api#sendmediagroup
+    request_url = "{0}/bot{1}/sendMediaGroup".format(TELEGRAM_API_URL, telegram_bot_token)
+
+    # Define the JSON object body of the POST request.
+    data = {
+        "chat_id": telegram_chat_id,
+        "media": collection
+    }
+
+    # Execute the POST request.
+    try:
+        response = requests.post(request_url, data=json.dumps(data))
         response.raise_for_status()
     except Exception as error:
         logger.error(error)
@@ -740,7 +776,7 @@ def lambda_handler(event, context):
     chat_room_message = create_chat_room_message(input_arguments=input_arguments)
 
     # Send the message text to the telegram.
-    if message_text is not None:
+    if message_text is not None and message_content is None:
         send_message_text_to_telegram(
             telegram_bot_token=telegram_bot_token,
             telegram_chat_id=telegram_chat_id,
@@ -779,28 +815,32 @@ def lambda_handler(event, context):
                 send_document_to_telegram(
                     telegram_bot_token=telegram_bot_token,
                     telegram_chat_id=telegram_chat_id,
-                    document_url=get_the_presigned_url(file_url=file_url)
+                    document_url=get_the_presigned_url(file_url=file_url),
+                    caption=message_text
                 )
             elif file_category == "image":
                 # Send the image to the telegram.
                 send_image_to_telegram(
                     telegram_bot_token=telegram_bot_token,
                     telegram_chat_id=telegram_chat_id,
-                    image_url=get_the_presigned_url(file_url=file_url)
+                    image_url=get_the_presigned_url(file_url=file_url),
+                    caption=message_text
                 )
             elif file_category == "video":
                 # Send the video to the telegram.
                 send_video_to_telegram(
                     telegram_bot_token=telegram_bot_token,
                     telegram_chat_id=telegram_chat_id,
-                    video_url=get_the_presigned_url(file_url=file_url)
+                    video_url=get_the_presigned_url(file_url=file_url),
+                    caption=message_text
                 )
             elif file_category == "audio":
                 # Send the audio to the telegram.
                 send_audio_to_telegram(
                     telegram_bot_token=telegram_bot_token,
                     telegram_chat_id=telegram_chat_id,
-                    audio_url=get_the_presigned_url(file_url=file_url)
+                    audio_url=get_the_presigned_url(file_url=file_url),
+                    caption=message_text
                 )
             else:
                 pass
@@ -815,7 +855,13 @@ def lambda_handler(event, context):
 
                 # Add the new item to the list of collection.
                 if presigned_url is not None:
-                    collection.append({"type": "document", "media": presigned_url})
+                    media = {
+                        "type": "document",
+                        "media": presigned_url
+                    }
+                    if message_text is not None:
+                        media["caption"] = message_text
+                    collection.append(media)
 
             # Send the collection to the telegram.
             send_collection_to_telegram(
