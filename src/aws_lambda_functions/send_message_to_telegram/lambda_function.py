@@ -705,9 +705,14 @@ def send_collection_to_telegram(**kwargs) -> None:
         "media": collection
     }
 
+    # Define the header setting.
+    headers = {
+        "Content-Type": "application/json"
+    }
+
     # Execute the POST request.
     try:
-        response = requests.post(request_url, data=data)
+        response = requests.post(request_url, json=data, headers=headers)
         response.raise_for_status()
     except Exception as error:
         logger.error(error)
