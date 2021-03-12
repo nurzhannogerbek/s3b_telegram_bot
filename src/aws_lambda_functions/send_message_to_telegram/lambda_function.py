@@ -864,9 +864,11 @@ def lambda_handler(event, context):
                         "type": "document",
                         "media": presigned_url
                     }
-                    if message_text is not None:
-                        media["caption"] = message_text
                     collection.append(media)
+
+            # Define the caption to the collection.
+            if message_text is not None:
+                collection[-1]["caption"] = message_text
 
             # Send the collection to the telegram.
             send_collection_to_telegram(
