@@ -707,7 +707,7 @@ def send_collection_to_telegram(**kwargs) -> None:
 
     # Execute the POST request.
     try:
-        response = requests.post(request_url, data=json.dumps(data))
+        response = requests.post(request_url, data=data)
         response.raise_for_status()
     except Exception as error:
         logger.error(error)
