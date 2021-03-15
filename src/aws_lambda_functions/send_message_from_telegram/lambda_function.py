@@ -957,15 +957,15 @@ def form_message_content_format(**kwargs):
         message_content = [
             {
                 "category": "gif",
-                "fileName": animation["file_name"],
-                "fileExtension": ".{0}".format(animation["file_name"].rsplit('.', 1)[1]).lower(),
+                "fileName": "{0}.mp4".format(animation["file_unique_id"]),
+                "fileExtension": ".mp4",
                 "fileSize": animation["file_size"],
                 "mimeType": animation["mime_type"],
                 "url": upload_file_to_s3_bucket(
                     telegram_bot_token=telegram_bot_token,
                     file_id=animation["file_id"],
                     chat_room_id=chat_room_id,
-                    file_name=animation["file_name"]
+                    file_name="{0}.mp4".format(animation["file_unique_id"])
                 ),
                 "dimensions": {
                     "width": animation["width"],
