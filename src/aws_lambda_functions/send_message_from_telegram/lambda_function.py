@@ -822,14 +822,10 @@ def upload_file_to_s3_bucket(**kwargs) -> AnyStr:
         logger.error(error)
         raise Exception(error)
 
-    # Define the value of the file.
-    try:
-        files = [
-            ('file', (file_name, open(response.text, 'rb'), 'application/octet-stream'))
-        ]
-    except Exception as error:
-        logger.error(error)
-        raise Exception(error)
+    # Define a dictionary of files to send to the s3 bucket url address.
+    files = {
+        "file": response.content
+    }
 
     # Execute GET request.
     try:
@@ -928,6 +924,7 @@ def lambda_handler(event, context):
         video = message.get("video", None)
         document = message.get("document", None)
         voice = message.get("voice", None)
+        audio = message.get("audio", None)
         metadata = message.get("from", None)
         first_name = metadata.get("first_name", None)
         last_name = metadata.get("last_name", None)
@@ -947,7 +944,7 @@ def lambda_handler(event, context):
             file_category = "video"
         elif document is not None and animation is None:
             file_category = "document"
-        elif voice is not None:
+        elif voice is not None or audio is not None:
             file_category = "audio"
         else:
             # Define the custom message text.
