@@ -23,6 +23,7 @@ POSTGRESQL_DB_NAME = os.environ["POSTGRESQL_DB_NAME"]
 TELEGRAM_API_URL = "https://api.telegram.org"
 APPSYNC_CORE_API_URL = os.environ["APPSYNC_CORE_API_URL"]
 APPSYNC_CORE_API_KEY = os.environ["APPSYNC_CORE_API_KEY"]
+FILE_STORAGE_SERVICE_URL = os.environ["FILE_STORAGE_SERVICE_URL"]
 
 # The connection to the database will be created the first time the AWS Lambda function is called.
 # Any subsequent call to the function will use the same database connection until the container stops.
@@ -682,7 +683,7 @@ def create_chat_room_message(**kwargs):
     return response.json()
 
 
-def update_message_data(**kwargs):
+def update_message_data(**kwargs) -> None:
     # Check if the input dictionary has all the necessary keys.
     try:
         chat_room_id = kwargs["chat_room_id"]
@@ -770,6 +771,115 @@ def update_message_data(**kwargs):
     return None
 
 
+def upload_file_to_s3_bucket(**kwargs) -> AnyStr:
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        telegram_bot_token = kwargs["telegram_bot_token"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        file_id = kwargs["file_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        chat_room_id = kwargs["chat_room_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        file_name = kwargs["file_name"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Execute GET request.
+    try:
+        response = requests.get(
+            "{0}/bot{1}/getFile".format(TELEGRAM_API_URL, telegram_bot_token),
+            params={
+                "file_id": file_id
+            }
+        )
+        response.raise_for_status()
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Define the internal file path in the telegram's system.
+    try:
+        file_path = response.json()["result"]["file_path"]
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Execute GET request.
+    try:
+        response = requests.get("{0}/file/bot{1}/{2}".format(TELEGRAM_API_URL, telegram_bot_token, file_path))
+        response.raise_for_status()
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Define the value of the file.
+    try:
+        files = [
+            ('file', (file_name, open(response.text, 'rb'), 'application/octet-stream'))
+        ]
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Execute GET request.
+    try:
+        response = requests.get(
+            "{0}/get_presigned_url_to_upload_file".format(FILE_STORAGE_SERVICE_URL),
+            params={
+                "key": "chat_rooms/{0}/{1}".format(chat_room_id, file_name)
+            }
+        )
+        response.raise_for_status()
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Define a few necessary variables.
+    try:
+        request_url = response.json()["data"]["url"]
+        original_file_url = response.json()["url"]
+        key = response.json()["data"]["fields"]["key"]
+        x_amz_algorithm = response.json()["data"]["fields"]["x-amz-algorithm"]
+        x_amz_credential = response.json()["data"]["fields"]["x-amz-credential"]
+        x_amz_date = response.json()["data"]["fields"]["x-amz-date"]
+        policy = response.json()["data"]["fields"]["policy"]
+        x_amz_signature = response.json()["data"]["fields"]["x-amz-signature"]
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Define the JSON object body of the POST request.
+    data = {
+        "key": key,
+        "x-amz-algorithm": x_amz_algorithm,
+        "x-amz-credential": x_amz_credential,
+        "x-amz-date": x_amz_date,
+        "policy": policy,
+        "x-amz-signature": x_amz_signature
+    }
+
+    # Execute POST request.
+    try:
+        response = requests.post(request_url, data=data, files=files)
+        response.raise_for_status()
+    except Exception as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Return the original url address of the file.
+    return original_file_url
+
+
 def lambda_handler(event, context):
     """
     :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
@@ -785,19 +895,12 @@ def lambda_handler(event, context):
 
     # Check if the message object is available in the JSON object.
     if message:
-        # Define the telegram chat id and message text which the client sent.
+        # Define the telegram chat id.
         try:
             telegram_chat_id = str(message["chat"]["id"])
         except Exception as error:
             logger.error(error)
             raise Exception(error)
-        message_text = message.get("text", None)
-
-        # Make up the content value of the last chat room message.
-        last_message_content = json.dumps({
-            "messageText": message_text,
-            "messageContent": None
-        })
 
         # Define the business account from which clients write.
         try:
@@ -817,118 +920,37 @@ def lambda_handler(event, context):
             }
         )
 
-        # Check if message text is available.
-        if message_text:
-            # Define a few necessary variables that will be used in the future.
-            metadata = message.get("from", None)
-            first_name = metadata.get("first_name", None)
-            last_name = metadata.get("last_name", None)
-            telegram_username = metadata.get("username", None)
-            is_bot = metadata.get("is_bot", None)
+        # Define a few necessary variables that will be used in the future.
+        message_text = message.get("text", None)
+        animation = message.get("animation", None)
+        sticker = message.get("sticker", None)
+        photo = message.get("photo", None)
+        video = message.get("video", None)
+        document = message.get("document", None)
+        voice = message.get("voice", None)
+        metadata = message.get("from", None)
+        first_name = metadata.get("first_name", None)
+        last_name = metadata.get("last_name", None)
+        telegram_username = metadata.get("username", None)
+        is_bot = metadata.get("is_bot", None)
 
-            # Check whether a person or bot writes to us.
-            if not is_bot:
-                # Check the value of the message text which was sent.
-                if message_text == "/start":
-                    # Define the message text.
-                    message_text = "🤖💬\nЗдравствуйте! Чем мы можем Вам помочь?"
-
-                    # Send the message text to the telegram.
-                    send_message_text_to_telegram(
-                        telegram_bot_token=telegram_bot_token,
-                        telegram_chat_id=telegram_chat_id,
-                        message_text=message_text
-                    )
-                else:
-                    # Get the aggregated data.
-                    aggregated_data = get_aggregated_data(
-                        postgresql_connection=postgresql_connection,
-                        sql_arguments={
-                            "telegram_chat_id": "{0}:{1}".format(business_account, telegram_chat_id)
-                        }
-                    )
-
-                    # Define several variables that will be used in the future.
-                    if aggregated_data is not None:
-                        chat_room_id = aggregated_data["chat_room_id"]
-                        channel_id = aggregated_data["channel_id"]
-                        chat_room_status = aggregated_data["chat_room_status"]
-                        client_id = aggregated_data["client_id"]
-                    else:
-                        chat_room_id, channel_id, chat_room_status, client_id = None, None, None, None
-
-                    # Check the chat room status.
-                    if chat_room_status is None:
-                        # Check whether the user was registered in the system earlier.
-                        client_id = get_identified_user_data(
-                            postgresql_connection=postgresql_connection,
-                            sql_arguments={
-                                "telegram_username": telegram_username
-                            }
-                        )
-
-                        # Create the new user.
-                        if client_id is None:
-                            client_id = create_identified_user(
-                                postgresql_connection=postgresql_connection,
-                                sql_arguments={
-                                    "identified_user_first_name": first_name,
-                                    "identified_user_last_name": last_name,
-                                    "metadata": json.dumps(metadata),
-                                    "telegram_username": telegram_username
-                                }
-                            )
-
-                        # Create the new chat room.
-                        chat_room = create_chat_room(
-                            channel_technical_id=telegram_bot_token,
-                            client_id=client_id,
-                            last_message_content=last_message_content,
-                            telegram_chat_id="{0}:{1}".format(business_account, telegram_chat_id)
-                        )
-
-                        # Define a few necessary variables that will be used in the future.
-                        try:
-                            chat_room_id = chat_room["data"]["createChatRoom"]["chatRoomId"]
-                        except Exception as error:
-                            logger.error(error)
-                            raise Exception(error)
-                        try:
-                            channel_id = chat_room["data"]["createChatRoom"]["channelId"]
-                        except Exception as error:
-                            logger.error(error)
-                            raise Exception(error)
-                    elif chat_room_status == "completed":
-                        # Activate closed chat room before sending a message to the operator.
-                        activate_closed_chat_room(
-                            chat_room_id=chat_room_id,
-                            client_id=client_id,
-                            last_message_content=last_message_content
-                        )
-
-                    # Send the message to the operator and save it in the database.
-                    chat_room_message = create_chat_room_message(
-                        chat_room_id=chat_room_id,
-                        message_author_id=client_id,
-                        message_channel_id=channel_id,
-                        message_text=message_text,
-                        message_content=None
-                    )
-
-                    # Define the id of the created message.
-                    try:
-                        message_id = chat_room_message["data"]["createChatRoomMessage"]["messageId"]
-                    except Exception as error:
-                        logger.error(error)
-                        raise Exception(error)
-
-                    # Update the data (unread message number / message status) of the created message.
-                    update_message_data(
-                        chat_room_id=chat_room_id,
-                        messages_ids=[message_id]
-                    )
+        # Define the message category.
+        if message_text is not None:
+            file_category = None
+        elif animation is not None and document is not None:
+            file_category = "gif"
+        elif sticker is not None:
+            file_category = "sticker"
+        elif photo is not None:
+            file_category = "image"
+        elif video is not None:
+            file_category = "video"
+        elif document is not None and animation is None:
+            file_category = "document"
+        elif voice is not None:
+            file_category = "audio"
         else:
-            # Define the message text.
+            # Define the custom message text.
             message_text = "🤖💬\nОбработка данного формата в данный момент невозможна."
 
             # Send the message text to the telegram.
@@ -937,6 +959,160 @@ def lambda_handler(event, context):
                 telegram_chat_id=telegram_chat_id,
                 message_text=message_text
             )
+
+            # Return the status code 200.
+            return {
+                "statusCode": 200
+            }
+
+        # Check whether a person or bot writes to us.
+        if not is_bot:
+            # Check the value of the message text which was sent.
+            if message_text == "/start":
+                # Define the custom message text.
+                message_text = "🤖💬\nЗдравствуйте! Чем мы можем Вам помочь?"
+
+                # Send the message text to the telegram.
+                send_message_text_to_telegram(
+                    telegram_bot_token=telegram_bot_token,
+                    telegram_chat_id=telegram_chat_id,
+                    message_text=message_text
+                )
+            else:
+                # Get the aggregated data.
+                aggregated_data = get_aggregated_data(
+                    postgresql_connection=postgresql_connection,
+                    sql_arguments={
+                        "telegram_chat_id": "{0}:{1}".format(business_account, telegram_chat_id)
+                    }
+                )
+
+                # Determine whether this is a new chat room or not.
+                if aggregated_data is not None:
+                    chat_room_id = aggregated_data["chat_room_id"]
+                    channel_id = aggregated_data["channel_id"]
+                    chat_room_status = aggregated_data["chat_room_status"]
+                    client_id = aggregated_data["client_id"]
+                else:
+                    chat_room_id, channel_id, chat_room_status, client_id = None, None, None, None
+
+                # The first message should be from the test message.
+                if file_category is not None and chat_room_id is None:
+                    # Define the custom message text.
+                    message_text = "🤖💬\nВаше первое сообщение должно быть в текстовом формате."
+
+                    # Send the message text to the telegram.
+                    send_message_text_to_telegram(
+                        telegram_bot_token=telegram_bot_token,
+                        telegram_chat_id=telegram_chat_id,
+                        message_text=message_text
+                    )
+
+                    # Return the status code 200.
+                    return {
+                        "statusCode": 200
+                    }
+
+                # Depending on the file category, we define the value of the message content.
+                if file_category == "gif":
+                    message_content = [
+                        {
+                            "category": file_category,
+                            "fileExtension": ".{0}".format(animation["file_name"].rsplit('.', 1)[1]),
+                            "fileSize": animation["file_size"],
+                            "mimeType": animation["mime_type"],
+                            "url": upload_file_to_s3_bucket(
+                                telegram_bot_token=telegram_bot_token,
+                                file_id=animation["file_id"],
+                                chat_room_id=chat_room_id,
+                                file_name=animation["file_name"]
+                            ),
+                            "fileName": animation["file_name"],
+                            "dimensions": {
+                                "width": animation["width"],
+                                "height": animation["height"]
+                            }
+                        }
+                    ]
+                else:
+                    message_content = None
+
+                # Make up the content value of the last chat room message.
+                last_message_content = json.dumps({
+                    "messageText": message_text,
+                    "messageContent": message_content
+                })
+
+                # Check the chat room status.
+                if chat_room_status is None:
+                    # Check whether the user was registered in the system earlier.
+                    client_id = get_identified_user_data(
+                        postgresql_connection=postgresql_connection,
+                        sql_arguments={
+                            "telegram_username": telegram_username
+                        }
+                    )
+
+                    # Create the new user.
+                    if client_id is None:
+                        client_id = create_identified_user(
+                            postgresql_connection=postgresql_connection,
+                            sql_arguments={
+                                "identified_user_first_name": first_name,
+                                "identified_user_last_name": last_name,
+                                "metadata": json.dumps(metadata),
+                                "telegram_username": telegram_username
+                            }
+                        )
+
+                    # Create the new chat room.
+                    chat_room = create_chat_room(
+                        channel_technical_id=telegram_bot_token,
+                        client_id=client_id,
+                        last_message_content=last_message_content,
+                        telegram_chat_id="{0}:{1}".format(business_account, telegram_chat_id)
+                    )
+
+                    # Define a few necessary variables that will be used in the future.
+                    try:
+                        chat_room_id = chat_room["data"]["createChatRoom"]["chatRoomId"]
+                    except Exception as error:
+                        logger.error(error)
+                        raise Exception(error)
+                    try:
+                        channel_id = chat_room["data"]["createChatRoom"]["channelId"]
+                    except Exception as error:
+                        logger.error(error)
+                        raise Exception(error)
+                elif chat_room_status == "completed":
+                    # Activate closed chat room before sending a message to the operator.
+                    activate_closed_chat_room(
+                        chat_room_id=chat_room_id,
+                        client_id=client_id,
+                        last_message_content=last_message_content
+                    )
+
+                # Send the message to the operator and save it in the database.
+                chat_room_message = create_chat_room_message(
+                    chat_room_id=chat_room_id,
+                    message_author_id=client_id,
+                    message_channel_id=channel_id,
+                    message_text=message_text,
+                    message_content=json.dumps(message_content)
+                )
+
+                # Define the id of the created message.
+                try:
+                    message_id = chat_room_message["data"]["createChatRoomMessage"]["messageId"]
+                except Exception as error:
+                    logger.error(error)
+                    raise Exception(error)
+
+                # Update the data (unread message number / message status) of the created message.
+                update_message_data(
+                    chat_room_id=chat_room_id,
+                    messages_ids=[message_id]
+                )
 
     # Return the status code 200.
     return {
