@@ -1037,7 +1037,7 @@ def form_message_content_format(**kwargs):
                     telegram_bot_token=telegram_bot_token,
                     file_id=sticker["file_id"],
                     chat_room_id=chat_room_id,
-                    file_name="{0}.jpeg".format(sticker["file_unique_id"])
+                    file_name="{0}.webp".format(sticker["file_unique_id"])
                 ),
                 "dimensions": {
                     "width": sticker["width"],
