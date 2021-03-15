@@ -1029,10 +1029,10 @@ def form_message_content_format(**kwargs):
         message_content = [
             {
                 "category": "sticker",
-                "fileName": "{0}.jpeg".format(sticker["file_unique_id"]),
-                "fileExtension": ".jpeg",
+                "fileName": "{0}.webp".format(sticker["file_unique_id"]),
+                "fileExtension": ".webp",
                 "fileSize": sticker["file_size"],
-                "mimeType": "image/jpeg",
+                "mimeType": "image/webp",
                 "url": upload_file_to_s3_bucket(
                     telegram_bot_token=telegram_bot_token,
                     file_id=sticker["file_id"],
