@@ -1155,6 +1155,7 @@ def lambda_handler(event, context):
             "messageText": message_text,
             "messageContent": message_content
         })
+        message_content = json.dumps(message_content) if message_content is not None else None
 
         # Check the chat room status.
         if chat_room_status is None:
@@ -1217,7 +1218,7 @@ def lambda_handler(event, context):
             message_author_id=client_id,
             message_channel_id=channel_id,
             message_text=message_text,
-            message_content=json.dumps(message_content)
+            message_content=message_content
         )
 
         # Define the id of the created message.
