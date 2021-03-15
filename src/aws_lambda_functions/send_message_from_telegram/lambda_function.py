@@ -876,6 +876,202 @@ def upload_file_to_s3_bucket(**kwargs) -> AnyStr:
     return original_file_url
 
 
+def form_message_content_format(**kwargs):
+    # Check if the input dictionary has all the necessary keys.
+    try:
+        message = kwargs["message"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        telegram_bot_token = kwargs["telegram_bot_token"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+    try:
+        chat_room_id = kwargs["chat_room_id"]
+    except KeyError as error:
+        logger.error(error)
+        raise Exception(error)
+
+    # Define a few necessary variables.
+    text = message.get("text", None)
+    caption = message.get("caption", None)
+    contact = message.get("contact", None)
+    location = message.get("location", None)
+    document = message.get("document", None)
+    animation = message.get("animation", None)
+    video = message.get("video", None)
+    voice = message.get("voice", None)
+    audio = message.get("audio", None)
+    photo = message.get("photo", None)
+    sticker = message.get("sticker", None)
+
+    # Define the value of the message text.
+    if text is not None:
+        message_text = text
+    elif caption is not None:
+        message_text = caption
+    else:
+        message_text = None
+
+    # Define the value of the message content.
+    if contact is not None:
+        message_content = [
+            {
+                "category": "contact",
+                "details": {
+                    "firstName": contact["first_name"],
+                    "lastName": contact["last_name"],
+                    "phoneNumber": contact["phone_number"]
+                }
+            }
+        ]
+    elif location is not None:
+        message_content = [
+            {
+                "category": "location",
+                "details": {
+                    "latitude": location["latitude"],
+                    "longitude": location["longitude"]
+                }
+            }
+        ]
+    elif document is not None and animation is None:
+        message_content = [
+            {
+                "category": "document",
+                "fileName": document["file_name"],
+                "fileExtension": ".{0}".format(document["file_name"].rsplit('.', 1)[1]).lower(),
+                "fileSize": document["file_size"],
+                "mimeType": document["mime_type"],
+                "url": upload_file_to_s3_bucket(
+                    telegram_bot_token=telegram_bot_token,
+                    file_id=document["file_id"],
+                    chat_room_id=chat_room_id,
+                    file_name=document["file_name"]
+                )
+            }
+        ]
+    elif animation is not None and document is not None:
+        message_content = [
+            {
+                "category": "gif",
+                "fileName": animation["file_name"],
+                "fileExtension": ".{0}".format(animation["file_name"].rsplit('.', 1)[1]).lower(),
+                "fileSize": animation["file_size"],
+                "mimeType": animation["mime_type"],
+                "url": upload_file_to_s3_bucket(
+                    telegram_bot_token=telegram_bot_token,
+                    file_id=animation["file_id"],
+                    chat_room_id=chat_room_id,
+                    file_name=animation["file_name"]
+                ),
+                "dimensions": {
+                    "width": animation["width"],
+                    "height": animation["height"]
+                }
+            }
+        ]
+    elif video is not None:
+        message_content = [
+            {
+                "category": "video",
+                "fileName": video["file_name"],
+                "fileExtension": ".{0}".format(video["file_name"].rsplit('.', 1)[1]).lower(),
+                "fileSize": video["file_size"],
+                "mimeType": video["mime_type"],
+                "url": upload_file_to_s3_bucket(
+                    telegram_bot_token=telegram_bot_token,
+                    file_id=video["file_id"],
+                    chat_room_id=chat_room_id,
+                    file_name=video["file_name"]
+                ),
+                "dimensions": {
+                    "width": video["width"],
+                    "height": video["height"]
+                }
+            }
+        ]
+    elif voice is not None:
+        message_content = [
+            {
+                "category": "audio",
+                "fileName": "{0}.ogg".format(voice["file_unique_id"]),
+                "fileExtension": ".ogg",
+                "fileSize": voice["file_size"],
+                "mimeType": voice["mime_type"],
+                "url": upload_file_to_s3_bucket(
+                    telegram_bot_token=telegram_bot_token,
+                    file_id=voice["file_id"],
+                    chat_room_id=chat_room_id,
+                    file_name="{0}.ogg".format(voice["file_unique_id"])
+                )
+            }
+        ]
+    elif audio is not None:
+        message_content = [
+            {
+                "category": "audio",
+                "fileName": audio["file_name"],
+                "fileExtension": ".{0}".format(audio["file_name"].rsplit('.', 1)[1]).lower(),
+                "fileSize": audio["file_size"],
+                "mimeType": audio["mime_type"],
+                "url": upload_file_to_s3_bucket(
+                    telegram_bot_token=telegram_bot_token,
+                    file_id=audio["file_id"],
+                    chat_room_id=chat_room_id,
+                    file_name=audio["file_name"]
+                )
+            }
+        ]
+    elif sticker is not None:
+        message_content = [
+            {
+                "category": "sticker",
+                "fileName": "{0}.jpeg".format(sticker["file_unique_id"]),
+                "fileExtension": ".jpeg",
+                "fileSize": sticker["file_size"],
+                "mimeType": "image/jpeg",
+                "url": upload_file_to_s3_bucket(
+                    telegram_bot_token=telegram_bot_token,
+                    file_id=sticker["file_id"],
+                    chat_room_id=chat_room_id,
+                    file_name="{0}.jpeg".format(sticker["file_unique_id"])
+                ),
+                "dimensions": {
+                    "width": sticker["width"],
+                    "height": sticker["height"]
+                }
+            }
+        ]
+    elif photo is not None:
+        message_content = [
+            {
+                "category": "image",
+                "fileName": "{0}.jpeg".format(photo[-1]["file_unique_id"]),
+                "fileExtension": ".jpeg",
+                "fileSize": photo[-1]["file_size"],
+                "mimeType": "image/jpeg",
+                "url": upload_file_to_s3_bucket(
+                    telegram_bot_token=telegram_bot_token,
+                    file_id=photo[-1]["file_id"],
+                    chat_room_id=chat_room_id,
+                    file_name="{0}.jpeg".format(photo[-1]["file_unique_id"])
+                ),
+                "dimensions": {
+                    "width": photo[-1]["width"],
+                    "height": photo[-1]["height"]
+                }
+            }
+        ]
+    else:
+        message_content = None
+
+    # Return the content of the message.
+    return message_text, message_content
+
+
 def lambda_handler(event, context):
     """
     :param event: The AWS Lambda function uses this parameter to pass in event data to the handler.
@@ -887,10 +1083,17 @@ def lambda_handler(event, context):
     except Exception as error:
         logger.error(error)
         raise Exception(error)
-    message = body.get("message", None)
 
     # Check if the message object is available in the JSON object.
+    message = body.get("message", None)
     if message:
+        # Define the name of the chat bot.
+        try:
+            business_account = event['rawPath'].rsplit('/', 1)[1]
+        except Exception as error:
+            logger.error(error)
+            raise Exception(error)
+
         # Define the telegram chat id.
         try:
             telegram_chat_id = str(message["chat"]["id"])
@@ -898,15 +1101,22 @@ def lambda_handler(event, context):
             logger.error(error)
             raise Exception(error)
 
-        # Define the business account from which clients write.
-        try:
-            business_account = event['rawPath'].rsplit('/', 1)[1]
-        except Exception as error:
-            logger.error(error)
-            raise Exception(error)
-
         # Define the instances of the database connections.
         postgresql_connection = reuse_or_recreate_postgresql_connection()
+
+        # Get the aggregated data.
+        aggregated_data = get_aggregated_data(
+            postgresql_connection=postgresql_connection,
+            sql_arguments={
+                "telegram_chat_id": "{0}:{1}".format(business_account, telegram_chat_id)
+            }
+        )
+
+        # Determine whether this is a new chat room or not.
+        chat_room_id = aggregated_data["chat_room_id"] if aggregated_data is not None else None
+        channel_id = aggregated_data["channel_id"] if aggregated_data is not None else None
+        chat_room_status = aggregated_data["chat_room_status"] if aggregated_data is not None else None
+        client_id = aggregated_data["client_id"] if aggregated_data is not None else None
 
         # Get telegram bot token from the database.
         telegram_bot_token = get_telegram_bot_token(
@@ -916,39 +1126,17 @@ def lambda_handler(event, context):
             }
         )
 
-        # Define a few necessary variables that will be used in the future.
-        message_text = message.get("text", None)
-        animation = message.get("animation", None)
-        sticker = message.get("sticker", None)
-        photo = message.get("photo", None)
-        video = message.get("video", None)
-        document = message.get("document", None)
-        voice = message.get("voice", None)
-        audio = message.get("audio", None)
-        metadata = message.get("from", None)
-        first_name = metadata.get("first_name", None)
-        last_name = metadata.get("last_name", None)
-        telegram_username = metadata.get("username", None)
-        is_bot = metadata.get("is_bot", None)
+        # Form the format of the message content depending on the message category.
+        message_text, message_content = form_message_content_format(
+            message=message,
+            telegram_bot_token=telegram_bot_token,
+            chat_room_id=chat_room_id
+        )
 
-        # Define the message category.
-        if message_text is not None:
-            file_category = None
-        elif animation is not None and document is not None:
-            file_category = "gif"
-        elif sticker is not None:
-            file_category = "sticker"
-        elif photo is not None:
-            file_category = "image"
-        elif video is not None:
-            file_category = "video"
-        elif document is not None and animation is None:
-            file_category = "document"
-        elif voice is not None or audio is not None:
-            file_category = "audio"
-        else:
+        # Check whether it is possible to process this message category.
+        if message_text is None and message_content is None:
             # Define the custom message text.
-            message_text = "🤖💬\nОбработка данного формата в данный момент невозможна."
+            message_text = "🤖💬\nОбработка данного формата сообщения недоступна."
 
             # Send the message text to the telegram.
             send_message_text_to_telegram(
@@ -962,154 +1150,88 @@ def lambda_handler(event, context):
                 "statusCode": 200
             }
 
-        # Check whether a person or bot writes to us.
-        if not is_bot:
-            # Check the value of the message text which was sent.
-            if message_text == "/start":
-                # Define the custom message text.
-                message_text = "🤖💬\nЗдравствуйте! Чем мы можем Вам помочь?"
+        # Form the content value of the last chat room message.
+        last_message_content = json.dumps({
+            "messageText": message_text,
+            "messageContent": message_content
+        })
 
-                # Send the message text to the telegram.
-                send_message_text_to_telegram(
-                    telegram_bot_token=telegram_bot_token,
-                    telegram_chat_id=telegram_chat_id,
-                    message_text=message_text
-                )
-            else:
-                # Get the aggregated data.
-                aggregated_data = get_aggregated_data(
+        # Check the chat room status.
+        if chat_room_status is None:
+            # Define a few necessary variables that will be used in the future.
+            metadata = message["from"]
+            first_name = metadata.get("first_name", None)
+            last_name = metadata.get("last_name", None)
+            telegram_username = metadata.get("username", None)
+
+            # Check whether the user was registered in the system earlier.
+            client_id = get_identified_user_data(
+                postgresql_connection=postgresql_connection,
+                sql_arguments={
+                    "telegram_username": telegram_username
+                }
+            )
+
+            # Create the new user.
+            if client_id is None:
+                client_id = create_identified_user(
                     postgresql_connection=postgresql_connection,
                     sql_arguments={
-                        "telegram_chat_id": "{0}:{1}".format(business_account, telegram_chat_id)
+                        "identified_user_first_name": first_name,
+                        "identified_user_last_name": last_name,
+                        "metadata": json.dumps(metadata),
+                        "telegram_username": telegram_username
                     }
                 )
 
-                # Determine whether this is a new chat room or not.
-                if aggregated_data is not None:
-                    chat_room_id = aggregated_data["chat_room_id"]
-                    channel_id = aggregated_data["channel_id"]
-                    chat_room_status = aggregated_data["chat_room_status"]
-                    client_id = aggregated_data["client_id"]
-                else:
-                    chat_room_id, channel_id, chat_room_status, client_id = None, None, None, None
+            # Create the new chat room.
+            chat_room = create_chat_room(
+                channel_technical_id=telegram_bot_token,
+                client_id=client_id,
+                last_message_content=last_message_content,
+                telegram_chat_id="{0}:{1}".format(business_account, telegram_chat_id)
+            )
 
-                # The first message should be from the test message.
-                if file_category is not None and chat_room_id is None:
-                    # Define the custom message text.
-                    message_text = "🤖💬\nВаше первое сообщение должно быть в текстовом формате."
+            # Define a few necessary variables that will be used in the future.
+            try:
+                chat_room_id = chat_room["data"]["createChatRoom"]["chatRoomId"]
+            except Exception as error:
+                logger.error(error)
+                raise Exception(error)
+            try:
+                channel_id = chat_room["data"]["createChatRoom"]["channelId"]
+            except Exception as error:
+                logger.error(error)
+                raise Exception(error)
+        elif chat_room_status == "completed":
+            # Activate closed chat room before sending a message to the operator.
+            activate_closed_chat_room(
+                chat_room_id=chat_room_id,
+                client_id=client_id,
+                last_message_content=last_message_content
+            )
 
-                    # Send the message text to the telegram.
-                    send_message_text_to_telegram(
-                        telegram_bot_token=telegram_bot_token,
-                        telegram_chat_id=telegram_chat_id,
-                        message_text=message_text
-                    )
+        # Send the message to the operator and save it in the database.
+        chat_room_message = create_chat_room_message(
+            chat_room_id=chat_room_id,
+            message_author_id=client_id,
+            message_channel_id=channel_id,
+            message_text=message_text,
+            message_content=json.dumps(message_content)
+        )
 
-                    # Return the status code 200.
-                    return {
-                        "statusCode": 200
-                    }
+        # Define the id of the created message.
+        try:
+            message_id = chat_room_message["data"]["createChatRoomMessage"]["messageId"]
+        except Exception as error:
+            logger.error(error)
+            raise Exception(error)
 
-                # Depending on the file category, we define the value of the message content.
-                if file_category == "gif":
-                    message_content = [
-                        {
-                            "category": file_category,
-                            "fileExtension": ".{0}".format(animation["file_name"].rsplit('.', 1)[1]),
-                            "fileSize": animation["file_size"],
-                            "mimeType": animation["mime_type"],
-                            "url": upload_file_to_s3_bucket(
-                                telegram_bot_token=telegram_bot_token,
-                                file_id=animation["file_id"],
-                                chat_room_id=chat_room_id,
-                                file_name=animation["file_name"]
-                            ),
-                            "fileName": animation["file_name"],
-                            "dimensions": {
-                                "width": animation["width"],
-                                "height": animation["height"]
-                            }
-                        }
-                    ]
-                else:
-                    message_content = None
-
-                # Make up the content value of the last chat room message.
-                last_message_content = json.dumps({
-                    "messageText": message_text,
-                    "messageContent": message_content
-                })
-
-                # Check the chat room status.
-                if chat_room_status is None:
-                    # Check whether the user was registered in the system earlier.
-                    client_id = get_identified_user_data(
-                        postgresql_connection=postgresql_connection,
-                        sql_arguments={
-                            "telegram_username": telegram_username
-                        }
-                    )
-
-                    # Create the new user.
-                    if client_id is None:
-                        client_id = create_identified_user(
-                            postgresql_connection=postgresql_connection,
-                            sql_arguments={
-                                "identified_user_first_name": first_name,
-                                "identified_user_last_name": last_name,
-                                "metadata": json.dumps(metadata),
-                                "telegram_username": telegram_username
-                            }
-                        )
-
-                    # Create the new chat room.
-                    chat_room = create_chat_room(
-                        channel_technical_id=telegram_bot_token,
-                        client_id=client_id,
-                        last_message_content=last_message_content,
-                        telegram_chat_id="{0}:{1}".format(business_account, telegram_chat_id)
-                    )
-
-                    # Define a few necessary variables that will be used in the future.
-                    try:
-                        chat_room_id = chat_room["data"]["createChatRoom"]["chatRoomId"]
-                    except Exception as error:
-                        logger.error(error)
-                        raise Exception(error)
-                    try:
-                        channel_id = chat_room["data"]["createChatRoom"]["channelId"]
-                    except Exception as error:
-                        logger.error(error)
-                        raise Exception(error)
-                elif chat_room_status == "completed":
-                    # Activate closed chat room before sending a message to the operator.
-                    activate_closed_chat_room(
-                        chat_room_id=chat_room_id,
-                        client_id=client_id,
-                        last_message_content=last_message_content
-                    )
-
-                # Send the message to the operator and save it in the database.
-                chat_room_message = create_chat_room_message(
-                    chat_room_id=chat_room_id,
-                    message_author_id=client_id,
-                    message_channel_id=channel_id,
-                    message_text=message_text,
-                    message_content=json.dumps(message_content)
-                )
-
-                # Define the id of the created message.
-                try:
-                    message_id = chat_room_message["data"]["createChatRoomMessage"]["messageId"]
-                except Exception as error:
-                    logger.error(error)
-                    raise Exception(error)
-
-                # Update the data (unread message number / message status) of the created message.
-                update_message_data(
-                    chat_room_id=chat_room_id,
-                    messages_ids=[message_id]
-                )
+        # Update the data (unread message number / message status) of the created message.
+        update_message_data(
+            chat_room_id=chat_room_id,
+            messages_ids=[message_id]
+        )
 
     # Return the status code 200.
     return {
