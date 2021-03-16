@@ -1026,25 +1026,28 @@ def form_message_content_format(**kwargs):
             }
         ]
     elif sticker is not None:
-        message_content = [
-            {
-                "category": "sticker",
-                "fileName": "{0}.webp".format(sticker["file_unique_id"]),
-                "fileExtension": ".webp",
-                "fileSize": sticker["file_size"],
-                "mimeType": "image/webp",
-                "url": upload_file_to_s3_bucket(
-                    telegram_bot_token=telegram_bot_token,
-                    file_id=sticker["file_id"],
-                    chat_room_id=chat_room_id,
-                    file_name="{0}.webp".format(sticker["file_unique_id"])
-                ),
-                "dimensions": {
-                    "width": sticker["width"],
-                    "height": sticker["height"]
+        if sticker["is_animated"] is False:
+            message_content = [
+                {
+                    "category": "sticker",
+                    "fileName": "{0}.webp".format(sticker["file_unique_id"]),
+                    "fileExtension": ".webp",
+                    "fileSize": sticker["file_size"],
+                    "mimeType": "image/webp",
+                    "url": upload_file_to_s3_bucket(
+                        telegram_bot_token=telegram_bot_token,
+                        file_id=sticker["file_id"],
+                        chat_room_id=chat_room_id,
+                        file_name="{0}.webp".format(sticker["file_unique_id"])
+                    ),
+                    "dimensions": {
+                        "width": sticker["width"],
+                        "height": sticker["height"]
+                    }
                 }
-            }
-        ]
+            ]
+        else:
+            message_content = None
     elif photo is not None:
         message_content = [
             {
