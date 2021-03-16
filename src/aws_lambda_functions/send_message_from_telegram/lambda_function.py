@@ -921,9 +921,9 @@ def form_message_content_format(**kwargs):
             {
                 "category": "contact",
                 "details": {
-                    "firstName": contact["first_name"],
-                    "lastName": contact["last_name"],
-                    "phoneNumber": contact["phone_number"]
+                    "firstName": contact.get("first_name", None),
+                    "lastName": contact.get("last_name", None),
+                    "phoneNumber": contact.get("phone_number", None)
                 }
             }
         ]
@@ -932,8 +932,8 @@ def form_message_content_format(**kwargs):
             {
                 "category": "location",
                 "details": {
-                    "latitude": location["latitude"],
-                    "longitude": location["longitude"]
+                    "latitude": location.get("latitude", None),
+                    "longitude": location.get("longitude", None)
                 }
             }
         ]
