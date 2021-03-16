@@ -876,7 +876,7 @@ def upload_file_to_s3_bucket(**kwargs) -> AnyStr:
     return original_file_url
 
 
-def form_message_content_format(**kwargs):
+def form_message_format(**kwargs):
     # Check if the input dictionary has all the necessary keys.
     try:
         message = kwargs["message"]
@@ -1129,113 +1129,135 @@ def lambda_handler(event, context):
             }
         )
 
-        # Form the format of the message content depending on the message category.
-        message_text, message_content = form_message_content_format(
-            message=message,
-            telegram_bot_token=telegram_bot_token,
-            chat_room_id=chat_room_id
-        )
+        # Define a few necessary variables.
+        text = message.get("text", None)
+        contact = message.get("contact", None)
+        location = message.get("location", None)
+        document = message.get("document", None)
+        animation = message.get("animation", None)
+        video = message.get("video", None)
+        voice = message.get("voice", None)
+        audio = message.get("audio", None)
+        photo = message.get("photo", None)
+        sticker = message.get("sticker", None)
+        poll = message.get("poll", None)
+        message_contents = [contact, location, document, animation, video, voice, audio, photo, sticker]
 
-        # Check whether it is possible to process this message category.
-        if message_text is None and message_content is None:
-            # Define the custom message text.
-            message_text = "🤖💬\nОбработка данного формата сообщения временно недоступна."
-
-            # Send the message text to the telegram.
+        # Check the conditions for the continuation of the business logic.
+        if text == "/start":
             send_message_text_to_telegram(
                 telegram_bot_token=telegram_bot_token,
                 telegram_chat_id=telegram_chat_id,
-                message_text=message_text
+                message_text="🤖💬\nЗдравствуйте! Чем мы можем Вам помочь?"
+            )
+        elif poll is not None:
+            send_message_text_to_telegram(
+                telegram_bot_token=telegram_bot_token,
+                telegram_chat_id=telegram_chat_id,
+                message_text="🤖💬\nОбработка опросов недоступна."
+            )
+        elif sticker is not None:
+            if sticker["is_animated"]:
+                send_message_text_to_telegram(
+                    telegram_bot_token=telegram_bot_token,
+                    telegram_chat_id=telegram_chat_id,
+                    message_text="🤖💬\nОбработка анимированных стикеров недоступна."
+                )
+        elif chat_room_id is None and any(message_content is not None for message_content in message_contents):
+            send_message_text_to_telegram(
+                telegram_bot_token=telegram_bot_token,
+                telegram_chat_id=telegram_chat_id,
+                message_text="🤖💬\nОпишите пожалуйста сперва вашу проблему в текстовом формате, чтобы операторы "
+                             "смогли Вам помочь."
+            )
+        else:
+            # Form the format of the message (text and content) depending on the message category.
+            message_text, message_content = form_message_format(
+                message=message,
+                telegram_bot_token=telegram_bot_token,
+                chat_room_id=chat_room_id
             )
 
-            # Return the status code 200.
-            return {
-                "statusCode": 200
-            }
+            # Form the message content values.
+            last_message_content = json.dumps({"messageText": message_text, "messageContent": message_content})
+            message_content = json.dumps(message_content) if message_content is not None else None
 
-        # Form the content value of the last chat room message.
-        last_message_content = json.dumps({
-            "messageText": message_text,
-            "messageContent": message_content
-        })
-        message_content = json.dumps(message_content) if message_content is not None else None
+            # Check the chat room status.
+            if chat_room_status is None:
+                # Define a few necessary variables that will be used in the future.
+                metadata = message["from"]
+                first_name = metadata.get("first_name", None)
+                last_name = metadata.get("last_name", None)
+                telegram_username = metadata.get("username", None)
 
-        # Check the chat room status.
-        if chat_room_status is None:
-            # Define a few necessary variables that will be used in the future.
-            metadata = message["from"]
-            first_name = metadata.get("first_name", None)
-            last_name = metadata.get("last_name", None)
-            telegram_username = metadata.get("username", None)
-
-            # Check whether the user was registered in the system earlier.
-            client_id = get_identified_user_data(
-                postgresql_connection=postgresql_connection,
-                sql_arguments={
-                    "telegram_username": telegram_username
-                }
-            )
-
-            # Create the new user.
-            if client_id is None:
-                client_id = create_identified_user(
+                # Check whether the user was registered in the system earlier.
+                client_id = get_identified_user_data(
                     postgresql_connection=postgresql_connection,
                     sql_arguments={
-                        "identified_user_first_name": first_name,
-                        "identified_user_last_name": last_name,
-                        "metadata": json.dumps(metadata),
                         "telegram_username": telegram_username
                     }
                 )
 
-            # Create the new chat room.
-            chat_room = create_chat_room(
-                channel_technical_id=telegram_bot_token,
-                client_id=client_id,
-                last_message_content=last_message_content,
-                telegram_chat_id="{0}:{1}".format(business_account, telegram_chat_id)
-            )
+                # Create the new user.
+                if client_id is None:
+                    client_id = create_identified_user(
+                        postgresql_connection=postgresql_connection,
+                        sql_arguments={
+                            "identified_user_first_name": first_name,
+                            "identified_user_last_name": last_name,
+                            "metadata": json.dumps(metadata),
+                            "telegram_username": telegram_username
+                        }
+                    )
 
-            # Define a few necessary variables that will be used in the future.
-            try:
-                chat_room_id = chat_room["data"]["createChatRoom"]["chatRoomId"]
-            except Exception as error:
-                logger.error(error)
-                raise Exception(error)
-            try:
-                channel_id = chat_room["data"]["createChatRoom"]["channelId"]
-            except Exception as error:
-                logger.error(error)
-                raise Exception(error)
-        elif chat_room_status == "completed":
-            # Activate closed chat room before sending a message to the operator.
-            activate_closed_chat_room(
+                # Create the new chat room.
+                chat_room = create_chat_room(
+                    channel_technical_id=telegram_bot_token,
+                    client_id=client_id,
+                    last_message_content=last_message_content,
+                    telegram_chat_id="{0}:{1}".format(business_account, telegram_chat_id)
+                )
+
+                # Define a few necessary variables that will be used in the future.
+                try:
+                    chat_room_id = chat_room["data"]["createChatRoom"]["chatRoomId"]
+                except Exception as error:
+                    logger.error(error)
+                    raise Exception(error)
+                try:
+                    channel_id = chat_room["data"]["createChatRoom"]["channelId"]
+                except Exception as error:
+                    logger.error(error)
+                    raise Exception(error)
+            elif chat_room_status == "completed":
+                # Activate closed chat room before sending a message to the operator.
+                activate_closed_chat_room(
+                    chat_room_id=chat_room_id,
+                    client_id=client_id,
+                    last_message_content=last_message_content
+                )
+
+            # Send the message to the operator and save it in the database.
+            chat_room_message = create_chat_room_message(
                 chat_room_id=chat_room_id,
-                client_id=client_id,
-                last_message_content=last_message_content
+                message_author_id=client_id,
+                message_channel_id=channel_id,
+                message_text=message_text,
+                message_content=message_content
             )
 
-        # Send the message to the operator and save it in the database.
-        chat_room_message = create_chat_room_message(
-            chat_room_id=chat_room_id,
-            message_author_id=client_id,
-            message_channel_id=channel_id,
-            message_text=message_text,
-            message_content=message_content
-        )
+            # Define the id of the created message.
+            try:
+                message_id = chat_room_message["data"]["createChatRoomMessage"]["messageId"]
+            except Exception as error:
+                logger.error(error)
+                raise Exception(error)
 
-        # Define the id of the created message.
-        try:
-            message_id = chat_room_message["data"]["createChatRoomMessage"]["messageId"]
-        except Exception as error:
-            logger.error(error)
-            raise Exception(error)
-
-        # Update the data (unread message number / message status) of the created message.
-        update_message_data(
-            chat_room_id=chat_room_id,
-            messages_ids=[message_id]
-        )
+            # Update the data (unread message number / message status) of the created message.
+            update_message_data(
+                chat_room_id=chat_room_id,
+                messages_ids=[message_id]
+            )
 
     # Return the status code 200.
     return {
