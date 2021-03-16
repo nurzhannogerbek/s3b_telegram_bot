@@ -1139,7 +1139,7 @@ def lambda_handler(event, context):
         # Check whether it is possible to process this message category.
         if message_text is None and message_content is None:
             # Define the custom message text.
-            message_text = "🤖💬\nОбработка данного формата сообщения недоступна."
+            message_text = "🤖💬\nОбработка данного формата сообщения временно недоступна."
 
             # Send the message text to the telegram.
             send_message_text_to_telegram(
