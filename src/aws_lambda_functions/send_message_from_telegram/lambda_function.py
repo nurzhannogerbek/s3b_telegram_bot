@@ -105,6 +105,7 @@ def postgresql_wrapper(function):
         result = function(**kwargs)
         cursor.close()
         return result
+
     return wrapper
 
 
@@ -1167,8 +1168,7 @@ def lambda_handler(event, context):
             send_message_text_to_telegram(
                 telegram_bot_token=telegram_bot_token,
                 telegram_chat_id=telegram_chat_id,
-                message_text="🤖💬\nОпишите пожалуйста сперва вашу проблему в текстовом формате, чтобы операторы "
-                             "смогли Вам помочь."
+                message_text="🤖💬\nОпишите пожалуйста сперва вашу проблему в текстовом формате."
             )
         else:
             # Form the format of the message (text and content) depending on the message category.
